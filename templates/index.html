@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Analyzer & Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Analyzer</h1>
+        <p>Upload your resume as PDF or DOC, and let our AI analyze it!</p>
+
+        <form id="resume-form" action="/upload" method="POST" enctype="multipart/form-data">
+            <label for="resume-upload" class="upload-label">Choose PDF or DOC File</label>
+            <input type="file" id="resume-upload" name="resume" accept=".pdf, .doc, .docx" required>
+            <button type="submit">Upload Resume</button>
+        </form>
+
+        <div id="analysis-result"></div>
+
+        <!-- AI Chat Box -->
+        <div class="chat-box">
+            <h2>AI Chat Box</h2>
+            <div id="chat-log"></div>
+            <textarea id="chat-input" placeholder="Type your message here..."></textarea>
+            <button id="send-chat">Send</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
