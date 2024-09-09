@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale 1.0">
+        <title>Job Recommendations</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <div class="jobs_container">
+            <h1>Job Recommendations</h1>
+
+            <form action="/filter_jobs" method="GET">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" placeholder="New York, Remote">
+
+                <label for="job-title">Job Title:</label>
+                <input type="text" id="job-title" name="job_title" placeholder="Software Engineer">
+
+                <label for="salary-min">Minium Salary:</label>
+                <input type="number" id="salary-min" name="salary_min" placeholder="50000">
+
+                <label for="experience">Experience:</label>
+                <select id="experience" name="experience_level">
+                    <option value="">Any</option>
+                    <option value="entry">Entry-level</option>
+                    <option value="mid">Mid-level</option>
+                    <option value="senior">Senior-level</option>
+                </select>
+                <button type="submit">Filter Jobs</button>
+            </form>
+        </div>
+    </body>
+</html>
