@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 
-app=Flask(_name_)
+app=Flask(__name__)
 
 #sample jobs(will be replaced when database is made)
 jobs = [
