@@ -35,7 +35,7 @@ def filter_jobs():
 #rending the HTML file with filtered jobs
     return render_template('job_results.html', jobs=filter_jobs)
 
-    if_name_ == "_main_":
+    if__name__ == "_main_":
         app.run(debug=True)
 
 
