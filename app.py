@@ -35,11 +35,11 @@ def parse_docx(file_path):
 # Function to grade the resume based on different criteria using OpenAI
 def grade_resume(resume_text):
     grading_criteria = {
-        "Experience": "How relevant is the experience described in the resume for the targeted job?",
-        "Skills": "Evaluate the relevance and proficiency of the listed skills in the resume.",
-        "Education": "Does the educational background align with the required qualifications for the job?",
-        "Clarity and Grammar": "Is the resume clear, well-written, and free of grammar mistakes?",
-        "Formatting": "Is the resume well-organized and properly formatted?"
+        "Experience": "Evaluate how relevant the experience described in the resume is for the targeted job and suggest improvements.",
+        "Skills": "Evaluate the relevance and proficiency of the listed skills in the resume and suggest ways to enhance the skills section.",
+        "Education": "Does the educational background align with the required qualifications for the job? Suggest improvements if needed.",
+        "Clarity and Grammar": "Evaluate whether the resume is clear, well-written, and free of grammar mistakes, and provide suggestions for improvement.",
+        "Formatting": "Evaluate the organization and formatting of the resume and suggest any improvements for better presentation."
     }
 
     grades = {}
@@ -90,17 +90,6 @@ def assign_letter_grade(percentage):
     else:
         return "F"
 
-# Function to analyze the resume using OpenAI (you can keep this or replace with grading)
-def analyze_resume(resume_text):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",  # Correct model name
-        messages=[{"role": "user", "content": f"Analyze this resume:\n{resume_text}"}],  # Chat message format
-        max_tokens=150,
-        temperature=0.7
-    )
-    # Access message content correctly using '.content'
-    return response.choices[0].message.content.strip()
-
 # Route to handle file upload and resume grading
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -139,12 +128,12 @@ def chat():
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Correct model name
-            messages=[{"role": "user", "content": user_message}],  # Chat message format
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_message}],
             max_tokens=150,
             temperature=0.7
         )
-        # Access the reply correctly using '.content'
+        # Extract the reply correctly using '.content'
         reply = response.choices[0].message.content.strip()
         return jsonify({'reply': reply})
     except Exception as e:
