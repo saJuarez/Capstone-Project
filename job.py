@@ -1,13 +1,14 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, flash
 import psycopg2
 import bcrypt
 
-app=Flask(__name__)
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'
 
-def get_db_connection();
+def get_db_connection():
     conn = psycopg2.connect(
         host="localhost",
-        database="Dev",
+        database="490DBMS",
         user="postgres",
         password="FalconCamaro28"
     )
@@ -22,7 +23,7 @@ def signup_user(email_or_phone, password):
     cursor.execute("""
     INSERT INTO users (email_or_phone, password)
     VALUES (%s, %s)
-    """,(email_or_phone, hashed_password))
+    """, (email_or_phone, hashed_password))
 
     conn.commit()
     cursor.close()
@@ -38,7 +39,7 @@ def verify_login(email_or_phone, password):
     cursor.close()
     conn.close()
     
-    if user_password and bcrypt.checkpw(password.encode('utf-8'), user_password[0].encode('utf-8')):
+    if user_password and bcrypt.checkpw(password.encode('utf-8'), user_password[0]):
         return True
     else:
         return False
@@ -73,12 +74,12 @@ def index():
     return render_template('login.html')
 
 
-#sample jobs(will be replaced when database is made)
+# Sample jobs (will be replaced when database is made)
 jobs = [
     {"title": "Software Engineer", "location": "Remote", "salary": 120000, "experience": "mid"},
     {"title": "Data Scientist", "location": "Remote", "salary": 110000, "experience": "entry"},
     {"title": "Web Developer", "location": "North Carolina", "salary": 90000, "experience": "entry"},
-    {"title": "Senior Software Enigeer", "location": "North Carolina", "salary": 150000, "experience": "senior"}
+    {"title": "Senior Software Engineer", "location": "North Carolina", "salary": 150000, "experience": "senior"}
 ]
 
 @app.route('/filter_jobs', methods=['GET'])
@@ -88,12 +89,12 @@ def filter_jobs():
     salary_min = request.args.get('salary_min')
     experience_level = request.args.get('experience_level')
 
-#converting salary_min in an int
+    # Convert salary_min to int if provided
     if salary_min:
         salary_min = int(salary_min)
 
-#filtering jobs based on options provided
-    filter_jobs = []
+    # Filtering jobs based on options provided
+    filtered_jobs = []
     for job in jobs:
         if location and location.lower() not in job['location'].lower():
             continue
@@ -101,12 +102,15 @@ def filter_jobs():
             continue
         if experience_level and experience_level != job['experience']:
             continue
-        filter_jobs.append(job)
-#rending the HTML file with filtered jobs
+        if salary_min and job['salary'] < salary_min:
+            continue
+        filtered_jobs.append(job)
+    
+    # Rendering the HTML file with filtered jobs
+    return render_template('job_results.html', jobs=filtered_jobs)
 
-    return render_template('job_results.html', jobs=filter_jobs)
+if __name__ == "__main__":
+    app.run(debug=True)
 
-    if__name__ == "_main_":
-        app.run(debug=True)
 
 
