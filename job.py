@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template, redirect, url_for, flash
 import psycopg2
 import bcrypt
+import os 
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -62,7 +64,7 @@ def auth():
             
             if verify_login(email_or_phone, password):
                 flash("Login successful!")
-                return redirect(url_for('filter_jobs'))  # Redirect to job page
+                return redirect(url_for('index'))  # Redirect to index page
             else:
                 flash("Login failed. Check your credentials.")
                 return redirect(url_for('auth'))
@@ -72,6 +74,10 @@ def auth():
 @app.route('/')
 def index():
     return render_template('login.html')
+
+@app.route('/index')
+def index():
+    return render_template('index.html') #Should be displayed after successful login/signup
 
 
 # Sample jobs (will be replaced when database is made)
