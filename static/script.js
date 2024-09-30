@@ -39,31 +39,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (logoutButton) {
         logoutButton.addEventListener('click', function (event) {
-            event.preventDefault(); // Prevent the default anchor behavior
-            if (sideMenu) {
-                sideMenu.classList.remove('open'); // Close the side menu when logout is clicked
-            }
-            if (loginModal) {
-                loginModal.style.display = 'block'; // Show the login modal
-            }
+            event.preventDefault(); 
+            sideMenu.classList.remove('open'); 
+            loginModal.style.display = 'block'; 
         });
     }
 
     /**
-     * Close Modal when clicking the close button or outside the modal.
+     * Close Login Modal
      */
-    document.querySelectorAll('.close-modal').forEach((closeModal) => {
-        closeModal.addEventListener('click', function () {
-            const modal = this.closest('.modal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
+    const closeLoginButton = loginModal.querySelector('.close-modal');
 
+    if (closeLoginButton) {
+        closeLoginButton.addEventListener('click', function () {
+            loginModal.style.display = 'none'; 
+        });
+    }
+
+    /**
+     * Show Sign Up Modal on Sign Up Button Click from Login Form
+     */
+    const signUpButton = document.getElementById('sign-up-button');
+    const signUpModal = document.getElementById('sign-up-modal');
+    if (signUpButton && signUpModal) {
+        signUpButton.addEventListener('click', function (event) {
+            event.preventDefault(); 
+            loginModal.style.display = 'none'; 
+            signUpModal.style.display = 'block'; 
+        });
+
+        const closeSignUpButton = signUpModal.querySelector('.close-modal');
+        if (closeSignUpButton) {
+            closeSignUpButton.addEventListener('click', function () {
+                signUpModal.style.display = 'none';
+            });
+        }
+    }
+
+    /**
+     * Close Modal when clicking outside the modal content.
+     */
     window.addEventListener('click', function (event) {
-        if (loginModal && event.target == loginModal) {
+        if (loginModal && event.target === loginModal) {
             loginModal.style.display = 'none';
+        } else if (signUpModal && event.target === signUpModal) {
+            signUpModal.style.display = 'none';
         }
     });
 
