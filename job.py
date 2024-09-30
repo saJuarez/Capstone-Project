@@ -16,26 +16,26 @@ def get_db_connection():
     )
     return conn
 
-def signup_user(email_or_phone, password):
+def signup_user(email, password):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     cursor.execute("""
-    INSERT INTO users (email_or_phone, password)
+    INSERT INTO users (email, password)
     VALUES (%s, %s)
-    """, (email_or_phone, hashed_password))
+    """, (email, hashed_password))
 
     conn.commit()
     cursor.close()
     conn.close()
 
-def verify_login(email_or_phone, password):
+def verify_login(email, password):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT password FROM users WHERE email_or_phone = %s", (email_or_phone,))
+    cursor.execute("SELECT password FROM users WHERE email = %s", (email,))
     user_password = cursor.fetchone()
     
     cursor.close()
@@ -51,7 +51,7 @@ def auth():
     if request.method == 'POST':
         if 'signup' in request.form:
             # Handle signup
-            email_or_phone = request.form['email_or_phone']
+            email = request.form['email']
             password = request.form['password']
             signup_user(email_or_phone, password)
             flash("Sign up successful! Please log in.")
@@ -59,10 +59,10 @@ def auth():
 
         elif 'login' in request.form:
             # Handle login
-            email_or_phone = request.form['email_or_phone']
+            email = request.form['email']
             password = request.form['password']
             
-            if verify_login(email_or_phone, password):
+            if verify_login(email, password):
                 flash("Login successful!")
                 return redirect(url_for('index'))  # Redirect to index page
             else:
