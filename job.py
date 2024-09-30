@@ -7,14 +7,6 @@ import os
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-def get_db_connection():
-    conn = psycopg2.connect(
-        host="localhost",
-        database="490DBMS",
-        user="postgres",
-        password="FalconCamaro28"
-    )
-    return conn
 
 def signup_user(email, password):
     conn = get_db_connection()
@@ -45,6 +37,19 @@ def verify_login(email, password):
         return True
     else:
         return False
+@app.route('/')
+def index():
+    conn = psycopg2.connect(database = "490DBMS",
+    user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
+
+    cur = conn.cursor()
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template('index.html', data=data)
 
 @app.route('/auth', methods=['GET', 'POST'])
 def auth():
@@ -71,13 +76,8 @@ def auth():
 
     return render_template('login.html')  # Renders the combined login/signup form
 
-@app.route('/')
-def index():
-    return render_template('login.html')
 
-@app.route('/index')
-def index():
-    return render_template('index.html') #Should be displayed after successful login/signup
+
 
 
 # Sample jobs (will be replaced when database is made)
@@ -117,6 +117,7 @@ def filter_jobs():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
 
