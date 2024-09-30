@@ -44,14 +44,13 @@ def grade_resume(resume_text):
 
     grades = {}
     total_score = 0
-    max_score = 100  # Total score of 100 for all criteria
 
     # Loop over each criterion and ask OpenAI to evaluate
     for criterion, prompt in grading_criteria.items():
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a resume grading assistant."},
+                {"role": "system", "content": "You are a strict resume grading assistant. Be as critical as possible."},
                 {"role": "user", "content": f"{prompt}\n\nResume:\n{resume_text}"}
             ],
             max_tokens=150,
@@ -59,38 +58,36 @@ def grade_resume(resume_text):
         )
         feedback = response.choices[0].message.content.strip()
         
-        # For simplicity, we will assign a random score for each category
-        score = analyze_feedback_and_assign_score(feedback)
+        # Make grading stricter (scale 10-15 instead of 15-20)
+        score = analyze_feedback_and_assign_strict_score(feedback)
         grades[criterion] = {"feedback": feedback, "score": score}
         total_score += score
 
     # Calculate final grade as a percentage
-    percentage = (total_score / (len(grading_criteria) * 20)) * 100  # Assuming each category is out of 20 points
+    percentage = (total_score / (len(grading_criteria) * 15)) * 100  # Max score per category is now 15
     final_grade = assign_letter_grade(percentage)
 
     return {"grades": grades, "total_score": total_score, "percentage": percentage, "final_grade": final_grade}
 
-def analyze_feedback_and_assign_score(feedback):
-    """
-    Analyze the feedback given by OpenAI and assign a score based on the relevance of the feedback.
-    """
-    # For now, return a random score between 15 and 20 for simplicity.
+# Stricter score assignment
+def analyze_feedback_and_assign_strict_score(feedback):
     import random
-    return random.randint(15, 20)
+    return random.randint(10, 15)
 
+# Adjust the letter grade assignment to match stricter criteria
 def assign_letter_grade(percentage):
     if percentage >= 90:
         return "A"
-    elif percentage >= 80:
+    elif percentage >= 75:  # Adjusted for tougher grading
         return "B"
-    elif percentage >= 70:
-        return "C"
     elif percentage >= 60:
+        return "C"
+    elif percentage >= 50:
         return "D"
     else:
         return "F"
 
-# Route to handle file upload and resume grading
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'resume' not in request.files:
@@ -112,11 +109,15 @@ def upload_file():
     # Grade the parsed resume text using OpenAI API
     grading_result = grade_resume(resume_text)
 
+    # Debugging log to verify the grading result
+    print(f"Grading result: {grading_result}")
+
     # Remove the uploaded file after analysis
     os.remove(file_path)
 
     # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
+
 
 # AI Chat Box route using OpenAI
 @app.route('/chat', methods=['POST'])
