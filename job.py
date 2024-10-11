@@ -1,30 +1,29 @@
-from flask import Flask, request, render_template, redirect, url_for, flash
+from flask import Flask, Blueprint, request, render_template, redirect, url_for, flash
 import psycopg2
+from psycopg2.extras import execute_values
 import bcrypt
 import os 
 
-
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-
-
 def signup_user(email, password):
-    conn = get_db_connection()
+    conn = psycopg2.connect(database = "490DBMS",
+    user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
     cursor = conn.cursor()
 
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    db_password = hashed_password.decode("utf-8")
 
     cursor.execute("""
     INSERT INTO users (email, password)
     VALUES (%s, %s)
-    """, (email, hashed_password))
+    """, (email, db_password))
 
     conn.commit()
     cursor.close()
     conn.close()
 
 def verify_login(email, password):
-    conn = get_db_connection()
+    conn = psycopg2.connect(database = "490DBMS",
+    user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
     cursor = conn.cursor()
     
     cursor.execute("SELECT password FROM users WHERE email = %s", (email,))
@@ -33,32 +32,59 @@ def verify_login(email, password):
     cursor.close()
     conn.close()
     
-    if user_password and bcrypt.checkpw(password.encode('utf-8'), user_password[0]):
+    if user_password and bcrypt.checkpw(password.encode('utf-8'), user_password[0].encode('utf-8')):
         return True
     else:
         return False
-@app.route('/')
-def index():
+
+
+
+job_page = Blueprint('job_page', __name__, template_folder='templates')
+@job_page.route('/jobs', methods=["GET", "POST"])
+def jobs():
     conn = psycopg2.connect(database = "490DBMS",
     user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
 
     cur = conn.cursor()
-
-    data = cur.fetchall()
+    
+    if request.method == 'POST':
+        title = "%" + request.form['title'] + "%"
+        location = "%" + request.form['location'] + "%"
+        salary = request.form['salary'] or 0
+        experience_level = request.form['experience_level'] or None
+        if experience_level == None:
+            data = cur.execute("SELECT * FROM jobs WHERE LOWER(title) LIKE LOWER(%s) AND LOWER(location) LIKE LOWER(%s) AND salary >= %s", (title, location, salary,))
+        else:
+            data = cur.execute("SELECT * FROM jobs WHERE LOWER(title) LIKE LOWER(%s) AND LOWER(location) LIKE LOWER(%s) AND salary >= %s AND experience_level = %s", (title, location, salary, experience_level,))
+    else:
+        data = cur.execute("SELECT * FROM jobs")
+    results = cur.fetchall()
 
     cur.close()
     conn.close()
 
-    return render_template('index.html', data=data)
+    return render_template('jobs.html', results=results)
 
-@app.route('/auth', methods=['GET', 'POST'])
+# @app.route('/')
+# def index():
+#     conn = psycopg2.connect(database = "490DBMS",
+#     user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
+
+#     cur = conn.cursor()
+
+#     cur.close()
+#     conn.close()
+
+#     return render_template('index.html')
+
+@job_page.route('/auth', methods=['GET', 'POST'])
 def auth():
     if request.method == 'POST':
         if 'signup' in request.form:
             # Handle signup
             email = request.form['email']
             password = request.form['password']
-            signup_user(email_or_phone, password)
+            signup_user(email, password)
             flash("Sign up successful! Please log in.")
             return redirect(url_for('auth'))
 
@@ -82,13 +108,32 @@ def auth():
 
 # Sample jobs (will be replaced when database is made)
 jobs = [
-    {"title": "Software Engineer", "location": "Remote", "salary": 120000, "experience": "mid"},
-    {"title": "Data Scientist", "location": "Remote", "salary": 110000, "experience": "entry"},
-    {"title": "Web Developer", "location": "North Carolina", "salary": 90000, "experience": "entry"},
-    {"title": "Senior Software Engineer", "location": "North Carolina", "salary": 150000, "experience": "senior"}
+    {"title": "Software Engineer", "location": "Remote", "salary": 120000, "experience_level": "mid"},
+    {"title": "Data Scientist", "location": "Remote", "salary": 110000, "experience_level": "entry"},
+    {"title": "Web Developer", "location": "North Carolina", "salary": 90000, "experience_level": "entry"},
+    {"title": "Senior Software Engineer", "location": "North Carolina", "salary": 150000, "experience_level": "senior"}
 ]
 
-@app.route('/filter_jobs', methods=['GET'])
+@job_page.route('/add_jobs', methods=['GET'])
+def add_jobs():
+    conn = psycopg2.connect(database = "490DBMS",
+    user="postgres", password="FalconCamaro28", host ="localhost", port="5432")
+    
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM jobs")
+
+    columns = jobs[0].keys()
+    query = "INSERT INTO jobs ({}) VALUES %s".format(','.join(columns))
+
+    # convert projects values to list of lists
+    values = [[value for value in job.values()] for job in jobs]
+
+    execute_values(cursor, query, values)
+    conn.commit()
+    conn.close()
+    
+
 def filter_jobs():
     location = request.args.get('location')
     job_title = request.args.get('job_title')

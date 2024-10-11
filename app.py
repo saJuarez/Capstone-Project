@@ -4,11 +4,13 @@ import pdfplumber
 import docx
 import openai
 from dotenv import load_dotenv
-
+from job import job_page
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+app.register_blueprint(job_page)
 app.config['UPLOAD_FOLDER'] = './uploads'
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -26,10 +28,6 @@ def parse_docx(file_path):
     doc = docx.Document(file_path)
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
-
-
-
-
 
 def analyze_resume(resume_text):
     response = openai.Completion.create(

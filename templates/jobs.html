@@ -4,21 +4,21 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale 1.0">
         <title>Job Recommendations</title>
-        <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     </head>
     <body>
-        <div class="jobs_container">
+        <div class="container" style="max-width: 1200px;">
             <h1>Job Recommendations</h1>
 
-            <form action="/filter_jobs" method="GET">
+            <form action="/jobs" method="POST">
                 <label for="location">Location:</label>
                 <input type="text" id="location" name="location" placeholder="New York, Remote">
 
                 <label for="job-title">Job Title:</label>
-                <input type="text" id="job-title" name="job_title" placeholder="Software Engineer">
+                <input type="text" id="job-title" name="title" placeholder="Software Engineer">
 
                 <label for="salary-min">Minium Salary:</label>
-                <input type="number" id="salary-min" name="salary_min" placeholder="50000">
+                <input type="number" id="salary-min" name="salary" placeholder="50000">
 
                 <label for="experience">Experience:</label>
                 <select id="experience" name="experience_level">
@@ -29,6 +29,29 @@
                 </select>
                 <button type="submit">Filter Jobs</button>
             </form>
+
+            <div id="results">
+                <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Location</th>
+                        <th>Salary</th>
+                        <th>Experience Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in results %}
+                    <tr>
+                        <td>{{ item[1] }}</td>
+                        <td>{{ item[2] }}</td>
+                        <td>{{ item[3] }}</td>
+                        <td>{{ item[4] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                </table>
+            </div>
         </div>
     </body>
 </html>
