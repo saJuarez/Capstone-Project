@@ -4,6 +4,8 @@ import pdfplumber
 import docx
 from openai import OpenAI
 from dotenv import load_dotenv
+import psycopg2
+from werkzeug.security import generate_password_hash
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,12 +13,72 @@ load_dotenv()
 # Initialize the OpenAI client with the API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Print the API key to verify it's loaded correctly (optional, for debugging)
 print(f"API Key: {os.getenv('OPENAI_API_KEY')}")  # Print API key loaded from env file for validation
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
+
+# Connect to PostgreSQL database
+def connect_to_db():
+    try:
+        connection = psycopg2.connect(
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT'),
+            database=os.getenv('DB_NAME')
+        )
+        return connection
+    except Exception as e:
+        print(f"Error connecting to the database: {e}")
+        return None
+
+def create_user_table():
+    connection = connect_to_db()
+    if connection is None:
+        print("Could not connect to the database.")
+        return
+    try:
+        cursor = connection.cursor()
+        # Create the users table if it doesn't already exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(100) UNIQUE NOT NULL,
+                email VARCHAR(150) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL
+            );
+        ''')
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("User table created successfully.")
+    except Exception as e:
+        print(f"Error creating user table: {e}")
+
+
+# Insert a user into the users table
+def insert_user(username, email, password):
+    connection = connect_to_db()
+    if connection is None:
+        return
+    try:
+        cursor = connection.cursor()
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')  # Hash the password
+        cursor.execute('''
+            INSERT INTO users (username, email, password)
+            VALUES (%s, %s, %s)
+            RETURNING id;
+        ''', (username, email, hashed_password))
+        connection.commit()
+        user_id = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        return user_id
+    except Exception as e:
+        print(f"Error inserting user: {e}")
+        return None
 
 # Function to parse PDF files
 def parse_pdf(file_path):
@@ -58,13 +120,13 @@ def grade_resume(resume_text):
         )
         feedback = response.choices[0].message.content.strip()
         
-        # Make grading stricter (scale 10-15 instead of 15-20)
+        # Make grading stricter
         score = analyze_feedback_and_assign_strict_score(feedback)
         grades[criterion] = {"feedback": feedback, "score": score}
         total_score += score
 
     # Calculate final grade as a percentage
-    percentage = (total_score / (len(grading_criteria) * 15)) * 100  # Max score per category is now 15
+    percentage = (total_score / (len(grading_criteria) * 15)) * 100
     final_grade = assign_letter_grade(percentage)
 
     return {"grades": grades, "total_score": total_score, "percentage": percentage, "final_grade": final_grade}
@@ -78,7 +140,7 @@ def analyze_feedback_and_assign_strict_score(feedback):
 def assign_letter_grade(percentage):
     if percentage >= 90:
         return "A"
-    elif percentage >= 75:  # Adjusted for tougher grading
+    elif percentage >= 80:
         return "B"
     elif percentage >= 60:
         return "C"
@@ -87,7 +149,7 @@ def assign_letter_grade(percentage):
     else:
         return "F"
 
-
+# Route to handle file upload and resume grading
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'resume' not in request.files:
@@ -118,7 +180,6 @@ def upload_file():
     # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
 
-
 # AI Chat Box route using OpenAI
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -140,6 +201,50 @@ def chat():
     except Exception as e:
         print(f"Error: {str(e)}")
         return jsonify({'error': f"Error generating reply: {str(e)}"}), 500
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Hash the password before saving it to the database
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+
+        # Insert the new user into the database
+        user_id = insert_user(username, email, hashed_password)
+        if user_id:
+            return redirect('/login')  # Redirect the user to the login page after successful signup
+        else:
+            return 'Error: User could not be created.'
+
+    return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        connection = connect_to_db()
+        cursor = connection.cursor()
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+        user = cursor.fetchone()
+
+        if user:
+            stored_password = user[3]  # Assuming the 4th column is the password
+            if check_password_hash(stored_password, password):
+                flash('Login successful!')
+                return redirect(url_for('index'))
+            else:
+                flash('Invalid credentials.')
+        else:
+            flash('User not found.')
+
+        cursor.close()
+        connection.close()
+
+    return render_template('login.html')
 
 # Root route to render the index page
 @app.route('/')
@@ -150,4 +255,8 @@ def index():
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
+
+    # Create the user table when the app starts
+    create_user_table()
+
     app.run(debug=True)

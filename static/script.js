@@ -15,11 +15,11 @@ document.getElementById('resume-form').addEventListener('submit', function(event
         body: formData,
     })
     .then(response => {
-        console.log('Upload response status:', response.status); // Log response status
-        return response.json();  // Parse JSON from the response
+        console.log('Upload response status:', response.status); 
+        return response.json();  
     })
     .then(data => {
-        console.log('Received grading result:', data); // Log the data received from backend
+        console.log('Received grading result:', data); 
         
         if (!data || !data.grading_result) {
             console.error('Invalid grading result:', data);
@@ -27,10 +27,10 @@ document.getElementById('resume-form').addEventListener('submit', function(event
             return;
         }
 
-        // Store the feedback data globally for PDF generation
+
         feedbackData = data;
 
-        // Clear loading and display result header
+    
         resultDiv.innerHTML = `<h2>Analysis Result:</h2><p>Grading Completed</p>`;
 
         // Display the grade in the modal
@@ -52,12 +52,12 @@ document.getElementById('resume-form').addEventListener('submit', function(event
         const modal = document.getElementById('gradeModal');
         modal.style.display = "block";
 
-        // Close the modal when the user clicks on <span> (x)
+        
         document.querySelector(".close").onclick = function() {
             modal.style.display = "none";
         };
 
-        // Close the modal when the user clicks anywhere outside of the modal
+        
         window.onclick = function(event) {
             if (event.target == modal) {
                 modal.style.display = "none";
@@ -70,12 +70,12 @@ document.getElementById('resume-form').addEventListener('submit', function(event
     });
 });
 
-// Chat Box Send Button
+// Chat Box
 document.getElementById('send-chat').addEventListener('click', function() {
     const input = document.getElementById('chat-input').value;
     const chatLog = document.getElementById('chat-log');
     
-    if (!input.trim()) return;  // Prevent sending empty messages
+    if (!input.trim()) return; 
 
     chatLog.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
     
@@ -90,14 +90,14 @@ document.getElementById('send-chat').addEventListener('click', function() {
         if (!response.ok) {
             throw new Error('Chat response not okay');
         }
-        return response.json(); // Parse the response as JSON
+        return response.json(); 
     })
     .then(data => {
         if (data.error) {
             throw new Error(data.error);
         }
         chatLog.innerHTML += `<div><strong>AI:</strong> ${data.reply}</div>`;
-        document.getElementById('chat-input').value = '';  // Clear the input
+        document.getElementById('chat-input').value = '';  
     })
     .catch(error => {
         console.error('Error:', error);
@@ -114,7 +114,6 @@ document.getElementById('download-feedback').addEventListener('click', function(
 
     let feedbackContent = `Grade: ${feedbackData.grading_result.final_grade} (${feedbackData.grading_result.percentage}%)\n\nFeedback:\n`;
     
-    // Collect feedback for each criterion
     Object.keys(feedbackData.grading_result.grades).forEach(criterion => {
         feedbackContent += `\n${criterion}:\n${feedbackData.grading_result.grades[criterion].feedback}\n`;
     });
@@ -123,7 +122,7 @@ document.getElementById('download-feedback').addEventListener('click', function(
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Add content to the PDF
+  
     doc.text(feedbackContent, 10, 10);
 
     // Save the PDF
