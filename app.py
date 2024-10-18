@@ -4,6 +4,9 @@ import pdfplumber
 import docx
 from openai import OpenAI
 from dotenv import load_dotenv
+import psycopg2
+from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,12 +14,73 @@ load_dotenv()
 # Initialize the OpenAI client with the API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Print the API key to verify it's loaded correctly (optional, for debugging)
 print(f"API Key: {os.getenv('OPENAI_API_KEY')}")  # Print API key loaded from env file for validation
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
+
+# Connect to PostgreSQL database
+def connect_to_db():
+    try:
+        connection = psycopg2.connect(
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT'),
+            database=os.getenv('DB_NAME')
+        )
+        return connection
+    except Exception as e:
+        print(f"Error connecting to the database: {e}")
+        return None
+    
+def create_user_table():
+    connection = connect_to_db()
+    if connection is None:
+        print("Could not connect to the database.")
+        return
+    try:
+        cursor = connection.cursor()
+        # Create the users table if it doesn't already exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(150) UNIQUE NOT NULL,
+                email VARCHAR(200) UNIQUE NOT NULL,
+                password VARCHAR(200) NOT NULL
+            );
+        ''')
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("User table created successfully.")
+    except Exception as e:
+        print(f"Error creating user table: {e}")
+
+# Insert a user into the users table
+def insert_user(username, email, password):
+    connection = connect_to_db()
+    if connection is None:
+        print("Database connection failed.")
+        return None
+    try:
+        cursor = connection.cursor()
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')  # Hash the password
+        cursor.execute('''
+            INSERT INTO users (username, email, password)
+            VALUES (%s, %s, %s)
+            RETURNING id;
+        ''', (username, email, hashed_password))
+        connection.commit()
+        user_id = cursor.fetchone()[0]
+        cursor.close()
+        connection.close()
+        print(f"User inserted with ID: {user_id}")
+        return user_id
+    except Exception as e:
+        print(f"Error inserting user: {e}")
+        return None
 
 # Function to parse PDF files
 def parse_pdf(file_path):
@@ -44,14 +108,13 @@ def grade_resume(resume_text):
 
     grades = {}
     total_score = 0
-    max_score = 100  # Total score of 100 for all criteria
 
     # Loop over each criterion and ask OpenAI to evaluate
     for criterion, prompt in grading_criteria.items():
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a resume grading assistant."},
+                {"role": "system", "content": "You are a strict resume grading assistant. Be as critical as possible."},
                 {"role": "user", "content": f"{prompt}\n\nResume:\n{resume_text}"}
             ],
             max_tokens=150,
@@ -59,33 +122,31 @@ def grade_resume(resume_text):
         )
         feedback = response.choices[0].message.content.strip()
         
-        # For simplicity, we will assign a random score for each category
-        score = analyze_feedback_and_assign_score(feedback)
+        # Make grading stricter
+        score = analyze_feedback_and_assign_strict_score(feedback)
         grades[criterion] = {"feedback": feedback, "score": score}
         total_score += score
 
     # Calculate final grade as a percentage
-    percentage = (total_score / (len(grading_criteria) * 20)) * 100  # Assuming each category is out of 20 points
+    percentage = (total_score / (len(grading_criteria) * 15)) * 100
     final_grade = assign_letter_grade(percentage)
 
     return {"grades": grades, "total_score": total_score, "percentage": percentage, "final_grade": final_grade}
 
-def analyze_feedback_and_assign_score(feedback):
-    """
-    Analyze the feedback given by OpenAI and assign a score based on the relevance of the feedback.
-    """
-    # For now, return a random score between 15 and 20 for simplicity.
+# Stricter score assignment
+def analyze_feedback_and_assign_strict_score(feedback):
     import random
-    return random.randint(15, 20)
+    return random.randint(10, 15)
 
+# Adjust the letter grade assignment to match stricter criteria
 def assign_letter_grade(percentage):
     if percentage >= 90:
         return "A"
     elif percentage >= 80:
         return "B"
-    elif percentage >= 70:
-        return "C"
     elif percentage >= 60:
+        return "C"
+    elif percentage >= 50:
         return "D"
     else:
         return "F"
@@ -111,6 +172,9 @@ def upload_file():
 
     # Grade the parsed resume text using OpenAI API
     grading_result = grade_resume(resume_text)
+
+    # Debugging log to verify the grading result
+    print(f"Grading result: {grading_result}")
 
     # Remove the uploaded file after analysis
     os.remove(file_path)
@@ -140,13 +204,62 @@ def chat():
         print(f"Error: {str(e)}")
         return jsonify({'error': f"Error generating reply: {str(e)}"}), 500
 
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        print(f"Received signup request: username={username}, email={email}")
+
+        # Check input lengths
+        if len(username) > 150 or len(email) > 200 or len(password) > 200:
+            return jsonify({'message': 'Input values are too long.'}), 400
+
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+        user_id = insert_user(username, email, hashed_password)
+
+        if user_id:
+            return jsonify({'message': 'Signup successful!'}), 200
+        else:
+            return jsonify({'message': 'Error: User could not be created.'}), 500
+    except Exception as e:
+        print(f"Error in signup route: {e}")
+        return jsonify({'message': f"Error: {str(e)}"}), 500
+
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    connection = connect_to_db()
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+    user = cursor.fetchone()
+
+    if user:
+        stored_password = user[3]
+        if check_password_hash(stored_password, password):
+            return jsonify({'message': 'Login successful!'}), 200
+        else:
+            return jsonify({'message': 'Invalid credentials.'}), 401
+    else:
+        return jsonify({'message': 'User not found.'}), 404
+
 # Root route to render the index page
 @app.route('/')
 def index():
     return render_template('index.html')
 
+print(f"DB Password: {os.getenv('DB_PASSWORD')}")
+
 # Main block to run the Flask app
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
+
+    # Create the user table when the app starts
+    create_user_table()
+
     app.run(debug=True)
