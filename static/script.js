@@ -1,10 +1,12 @@
+let feedbackData = null;
+
 document.addEventListener('DOMContentLoaded', function () {
     /**
-     * Sidebar toggle functionality.
+     * Sidebar toggle handling.
      */
     const sidebarIcon = document.getElementById('sidebar-icon');
     const sideMenu = document.getElementById('side-menu');
-    const closeMenu = document.querySelector('.close-menu');
+    const closeMenu = document.getElementById('close-menu');
 
     if (sidebarIcon) {
         sidebarIcon.addEventListener('click', function () {
@@ -32,60 +34,105 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /**
-     * Show Login Modal on Logout Button Click
+     * Show login modal when logout button is clicked.
      */
     const logoutButton = document.getElementById('logout-button');
     const loginModal = document.getElementById('login-modal');
 
     if (logoutButton) {
         logoutButton.addEventListener('click', function (event) {
-            event.preventDefault(); 
-            sideMenu.classList.remove('open'); 
-            loginModal.style.display = 'block'; 
+            event.preventDefault();
+            sideMenu.classList.remove('open');
+            loginModal.style.display = 'block';
+        });
+    }
+
+    function closeModal(modal) {
+        modal.style.display = 'none';
+    }
+
+    const closeButtons = document.querySelectorAll('.close-modal');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const modal = button.closest('.modal');
+            closeModal(modal);
+        });
+    });
+
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function (event) {
+            event.preventDefault();  
+
+            const formData = new FormData(this);
+
+            fetch('/login', {
+                method: 'POST',
+                body: formData,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Login successful!') {
+                        loginModal.style.display = 'none';
+                        alert('Login successful!');  
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during login.');
+                });
         });
     }
 
     /**
-     * Close Login Modal
-     */
-    const closeLoginButton = loginModal.querySelector('.close-modal');
-
-    if (closeLoginButton) {
-        closeLoginButton.addEventListener('click', function () {
-            loginModal.style.display = 'none'; 
-        });
-    }
-
-    /**
-     * Show Sign Up Modal on Sign Up Button Click from Login Form
+     * Show Sign Up Modal when sign Up button is clicked.
      */
     const signUpButton = document.getElementById('sign-up-button');
     const signUpModal = document.getElementById('sign-up-modal');
     if (signUpButton && signUpModal) {
         signUpButton.addEventListener('click', function (event) {
-            event.preventDefault(); 
-            loginModal.style.display = 'none'; 
-            signUpModal.style.display = 'block'; 
+            event.preventDefault();
+            loginModal.style.display = 'none';
+            signUpModal.style.display = 'block';
         });
-
-        const closeSignUpButton = signUpModal.querySelector('.close-modal');
-        if (closeSignUpButton) {
-            closeSignUpButton.addEventListener('click', function () {
-                signUpModal.style.display = 'none';
-            });
-        }
     }
 
-    /**
-     * Close Modal when clicking outside the modal content.
-     */
     window.addEventListener('click', function (event) {
         if (loginModal && event.target === loginModal) {
-            loginModal.style.display = 'none';
-        } else if (signUpModal && event.target === signUpModal) {
-            signUpModal.style.display = 'none';
+            closeModal(loginModal);
         }
     });
+
+    const signUpForm = document.getElementById('sign-up-form');
+    if (signUpForm) {
+        signUpForm.addEventListener('submit', function (event) {
+            event.preventDefault();  // Prevent default form submission
+
+            const formData = new FormData(this);
+
+            fetch('/signup', {
+                method: 'POST',
+                body: formData,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Signup successful!') {
+                        // Close the modal or redirect the user
+                        signUpModal.style.display = 'none';
+                        alert('Signup successful!');  // Replace with better UI feedback
+                    } else {
+                        // Show error message inside the modal
+                        alert(data.message);  // Replace with a modal message if desired
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during signup.');
+                });
+        });
+    }
 
     /**
      * Resume form submit handling.
@@ -104,32 +151,40 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'POST',
                 body: formData,
             })
-                .then((response) => response.json())
+                .then((response) => {
+                    console.log('Upload response status:', response.status);
+                    return response.json();
+                })
                 .then((data) => {
+                    console.log('Received grading result:', data);
+
+                    if (!data || !data.grading_result) {
+                        console.error('Invalid grading result:', data);
+                        resultDiv.innerHTML = `<p style="color:red;">Error in processing resume grading.</p>`;
+                        return;
+                    }
+
+                    feedbackData = data;
+
                     resultDiv.innerHTML = `<h2>Analysis Result:</h2><p>Grading Completed</p>`;
 
-                    // Display the grade in the modal
                     const gradeResult = `Your final grade is: ${data.grading_result.final_grade} (${data.grading_result.percentage}%)`;
                     document.getElementById('grade-result').innerText = gradeResult;
 
-                    // Clear previous feedback
                     const feedbackList = document.getElementById('feedback-list');
                     feedbackList.innerHTML = '';
 
-                    // Add feedback for each criterion
                     Object.keys(data.grading_result.grades).forEach((criterion) => {
                         const feedbackItem = document.createElement('li');
                         feedbackItem.innerHTML = `<strong>${criterion}:</strong> ${data.grading_result.grades[criterion].feedback}`;
                         feedbackList.appendChild(feedbackItem);
                     });
 
-                    // Show the modal
                     const gradeModal = document.getElementById('grade-modal');
                     if (gradeModal) {
                         gradeModal.style.display = 'block';
                     }
 
-                    // Handle the download of feedback
                     const downloadButton = document.getElementById('download-feedback');
                     if (downloadButton) {
                         downloadButton.addEventListener('click', function () {
@@ -139,18 +194,56 @@ document.addEventListener('DOMContentLoaded', function () {
                                 feedbackContent += `\n${criterion}:\n${data.grading_result.grades[criterion].feedback}\n`;
                             });
 
-                            // Create a blob and trigger a download
-                            const blob = new Blob([feedbackContent], { type: 'text/plain' });
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = 'resume_feedback.txt';
-                            link.click();
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF();
+                            doc.text(feedbackContent, 10, 10);
+                            doc.save('resume_feedback.pdf');
                         });
                     }
                 })
                 .catch((error) => {
-                    console.error('Error:', error);
+                    console.error('Error analyzing resume:', error);
                     resultDiv.innerHTML = `<p style="color:red;">Error analyzing resume.</p>`;
+                });
+        });
+    }
+
+    /**
+     * Chat Box handling.
+     */
+    const sendChatButton = document.getElementById('send-chat');
+    if (sendChatButton) {
+        sendChatButton.addEventListener('click', function () {
+            const input = document.getElementById('chat-input').value;
+            const chatLog = document.getElementById('chat-log');
+
+            if (!input.trim()) return;
+
+            chatLog.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: input })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Chat response not okay');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    chatLog.innerHTML += `<div><strong>AI:</strong> ${data.reply}</div>`;
+                    document.getElementById('chat-input').value = '';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    chatLog.innerHTML += `<div style="color:red;">Error sending message: ${error.message}</div>`;
                 });
         });
     }

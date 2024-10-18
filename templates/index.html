@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Analyzer & Chat</title>
+    <title>AI Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <!-- Side Menu -->
     <div id="sidebar-icon" aria-label="Open side menu">
-        <img src="../static/images/icons/sidebar-icon.svg" alt="Hamburger Menu Icon" width="40" height="40">
+        <img src="../static/images/icons/sidebar-icon.svg" alt="Menu icon" width="40" height="40">
     </div>
 
-    <nav id="side-menu" class="side-menu" aria-label="Sidebar navigation">
-        <button class="close-menu" aria-label="Close side menu">&times;</button>
+    <nav id="side-menu" aria-label="Sidebar navigation">
+        <button id="close-menu" aria-label="Close side menu">&times;</button>
         <ul>
             <li>
                 <a href="#">
@@ -34,7 +34,7 @@
                 </a>
             </li>
         </ul>
-        <a href="#" id="logout-button" class="logout-option">
+        <a href="#" id="logout-button">
             <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
             Logout
         </a>
@@ -45,14 +45,13 @@
         <div class="modal-content">
             <button class="close-modal" aria-label="Close login modal">&times;</button>
             <h2>Log In</h2>
-            <form id="login-form" autocomplete="off">
+            <form id="login-form" action="/login" method="POST">
                 <label for="email">Email:</label>
                 <input type="email" id="email" name="email" required>
-                
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
 
-                <div class="button-container">
+                <div id="button-container">
                     <button type="submit" id="login-button" class="button">Log In</button>
                     <button type="button" id="sign-up-button" class="button">Sign Up</button>
                 </div>
@@ -60,8 +59,27 @@
         </div>
     </div>
 
+    <!-- Sign-Up Modal -->
+    <div id="sign-up-modal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <button class="close-modal" aria-label="Close sign-up modal">&times;</button>
+            <h2>Sign Up</h2>
+            <form id="sign-up-form" action="/signup" method="POST">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <label for="sign-up-email">Email:</label>
+                <input type="email" id="sign-up-email" name="email" required>
+                <label for="sign-up-password">Password:</label>
+                <input type="password" id="sign-up-password" name="password" required>
+
+                <button type="submit" id="sign-up-submit" class="button">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+
     <!-- Main Content -->
-    <main class="main-container">
+    <main id="main-container">
         <h1>AI Resume Analyzer</h1>
         <p>Upload your resume as a PDF or DOCX file and let our AI analyze it!</p>
 
@@ -73,7 +91,7 @@
 
         <div id="analysis-result" aria-live="polite"></div>
 
-        <!-- Grade Modal Structure -->
+        <!-- Modal Structure -->
         <div id="grade-modal" class="modal" aria-hidden="true">
             <div class="modal-content">
                 <button class="close-modal" aria-label="Close grade modal">&times;</button>
