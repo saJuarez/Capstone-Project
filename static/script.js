@@ -247,4 +247,75 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+    document.addEventListener('DOMContentLoaded', function () {
+        // Ensure that feedback data is available when the resume analysis completes
+        let feedbackData = null;
+    
+        // Handle resume upload and analysis
+        document.getElementById('resume-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+    
+            const formData = new FormData(this);
+            const resultDiv = document.getElementById('analysis-result');
+            resultDiv.innerHTML = `<div class="loading"></div>Analyzing resume...`;
+    
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data || !data.grading_result) {
+                    resultDiv.innerHTML = `<p style="color:red;">Error in processing resume grading.</p>`;
+                    return;
+                }
+    
+                feedbackData = data;  // Store the feedback data for later use
+                resultDiv.innerHTML = `<h2>Analysis Result:</h2><p>Grading Completed</p>`;
+                document.getElementById('grade-result').innerText = `Your final grade is: ${data.grading_result.final_grade} (${data.grading_result.percentage}%)`;
+    
+                // Clear previous feedback and add new feedback
+                const feedbackList = document.getElementById('feedback-list');
+                feedbackList.innerHTML = '';
+                Object.keys(data.grading_result.grades).forEach(criterion => {
+                    const feedbackItem = document.createElement('li');
+                    feedbackItem.innerHTML = `<strong>${criterion}:</strong> ${data.grading_result.grades[criterion].feedback}`;
+                    feedbackList.appendChild(feedbackItem);
+                });
+    
+                // Show the modal
+                const gradeModal = document.getElementById('grade-modal');
+                gradeModal.style.display = 'block';
+    
+                // Close the modal when the user clicks on the close button
+                document.querySelector('.close-modal').onclick = function () {
+                    gradeModal.style.display = 'none';
+                };
+            })
+            .catch(error => {
+                console.error('Error analyzing resume:', error);
+                resultDiv.innerHTML = `<p style="color:red;">Error analyzing resume.</p>`;
+            });
+        });
+    
+        // Handle downloading feedback as PDF
+        document.getElementById('download-feedback').addEventListener('click', function () {
+            if (!feedbackData) {
+                console.error('No feedback data available to download.');
+                return;
+            }
+    
+            let feedbackContent = `Grade: ${feedbackData.grading_result.final_grade} (${feedbackData.grading_result.percentage}%)\n\nFeedback:\n`;
+            Object.keys(feedbackData.grading_result.grades).forEach(criterion => {
+                feedbackContent += `\n${criterion}:\n${feedbackData.grading_result.grades[criterion].feedback}\n`;
+            });
+    
+            // Create a new PDF using jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(feedbackContent, 10, 10);
+            doc.save('resume_feedback.pdf');
+        });
+    });
+    
 });

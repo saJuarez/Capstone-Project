@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import os
 import pdfplumber
 import docx
@@ -11,7 +11,7 @@ from werkzeug.security import check_password_hash
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize the OpenAI client with the API key
+# Initialize the OpenAI client with the APIç key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 print(f"API Key: {os.getenv('OPENAI_API_KEY')}")  # Print API key loaded from env file for validation
@@ -206,46 +206,65 @@ def chat():
 
 @app.route('/signup', methods=['POST'])
 def signup():
+    username = request.form.get('username')
+    email = request.form.get('email').lower()
+    password = request.form.get('password')
+
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
+    connection = connect_to_db()
     try:
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        print(f"Received signup request: username={username}, email={email}")
+        cursor = connection.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, email, password)
+            VALUES (%s, %s, %s) RETURNING id;
+        ''', (username, email, hashed_password))
+        user_id = cursor.fetchone()[0]
+        connection.commit()
 
-        # Check input lengths
-        if len(username) > 150 or len(email) > 200 or len(password) > 200:
-            return jsonify({'message': 'Input values are too long.'}), 400
+        cursor.close()
+        connection.close()
 
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
-        user_id = insert_user(username, email, hashed_password)
-
-        if user_id:
-            return jsonify({'message': 'Signup successful!'}), 200
-        else:
-            return jsonify({'message': 'Error: User could not be created.'}), 500
+        # Return user ID to client
+        return jsonify({'message': 'Signup successful!', 'user_id': user_id}), 200
     except Exception as e:
-        print(f"Error in signup route: {e}")
-        return jsonify({'message': f"Error: {str(e)}"}), 500
+        print(f"Error creating user: {e}")
+        return jsonify({'message': 'Signup failed.'}), 500
+
 
 @app.route('/login', methods=['POST'])
 def login():
-    email = request.form.get('email')
+    email = request.form.get('email').lower()
     password = request.form.get('password')
 
-    connection = connect_to_db()
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
-    user = cursor.fetchone()
+    print(f"Attempting login for email: {email}")
 
-    if user:
-        stored_password = user[3]
-        if check_password_hash(stored_password, password):
-            return jsonify({'message': 'Login successful!'}), 200
+    connection = connect_to_db()
+    try:
+        cursor = connection.cursor()
+        cursor.execute('SELECT id, password FROM users WHERE email = %s', (email,))
+        user = cursor.fetchone()
+
+        if user:
+            print(f"User found with email: {email}")
+            print(f"Stored hashed password: {user[1]}")
+
+            if check_password_hash(user[1], password):
+                print("Password matched")
+
+                # Return user ID to client
+                return jsonify({'message': 'Login successful!', 'user_id': user[0]}), 200
+            else:
+                print("Password mismatch")
+                return jsonify({'message': 'Invalid credentials'}), 401
         else:
-            return jsonify({'message': 'Invalid credentials.'}), 401
-    else:
-        return jsonify({'message': 'User not found.'}), 404
+            print("No user found with that email")
+            return jsonify({'message': 'Invalid credentials'}), 401
+    except Exception as e:
+        print(f"Error logging in: {e}")
+        return jsonify({'message': 'Login failed.'}), 500
+
+
 
 # Root route to render the index page
 @app.route('/')
@@ -263,3 +282,5 @@ if __name__ == '__main__':
     create_user_table()
 
     app.run(debug=True)
+
+   
