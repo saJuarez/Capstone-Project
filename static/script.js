@@ -2,6 +2,55 @@ let feedbackData = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     /**
+     * Helper functions
+     */
+    function openModal(modal) {
+        modal.style.display = 'block';
+    }
+
+    function closeModal(modal) {
+        modal.style.display = 'none';
+    }
+
+    function closeIfClickedOutside(target, element, icon) {
+        if (element && element.classList.contains('open') && target !== element && !element.contains(target) && target !== icon && !icon.contains(target)) {
+            element.classList.remove('open');
+        }
+    }
+
+    function handleFetchResponse(response) {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    }
+
+    function handleError(error, message = 'An error occurred.') {
+        console.error(error);
+        alert(message);
+    }
+
+    function handleFormSubmit(form, url, successMessage) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+                .then(handleFetchResponse)
+                .then(data => {
+                    if (data.message === successMessage) {
+                        closeModal(form.closest('.modal'));
+                        alert(successMessage);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => handleError(error, `An error occurred during ${url.split('/').pop()}.`));
+        });
+    }
+
+    /**
      * Sidebar toggle handling.
      */
     const sidebarIcon = document.getElementById('sidebar-icon');
@@ -21,17 +70,87 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.addEventListener('click', function (event) {
-        if (
-            sideMenu &&
-            sideMenu.classList.contains('open') &&
-            event.target !== sideMenu &&
-            !sideMenu.contains(event.target) &&
-            event.target !== sidebarIcon &&
-            !sidebarIcon.contains(event.target)
-        ) {
-            sideMenu.classList.remove('open');
+        closeIfClickedOutside(event.target, sideMenu, sidebarIcon);
+    });
+
+    // Open settings modal
+    const settingsLink = document.getElementById('settings-link');
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsLink && settingsModal) {
+        settingsLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            openModal(settingsModal);
+        });
+    }
+
+    window.addEventListener('click', function (event) {
+        if (settingsModal && event.target === settingsModal) {
+            closeModal(settingsModal);
         }
     });
+
+    // Tab switching logic
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function () {
+            // Remove active class from all tabs and tab contents
+            tabLinks.forEach(tab => tab.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Add active class to the clicked tab and the corresponding tab content
+            const tabId = this.getAttribute('data-tab');
+            document.getElementById(tabId).classList.add('active');
+            this.classList.add('active');
+        });
+    });
+
+    document.querySelectorAll('.close-modal').forEach(button => {
+        button.addEventListener('click', function () {
+            const modal = button.closest('.modal');
+            closeModal(modal);
+        });
+    });
+
+    // Toggle password fields when the "Change Password" button is clicked
+    const changePasswordButton = document.getElementById('change-password-button');
+    const passwordFields = document.getElementById('password-fields');
+
+    document.getElementById('password-fields').addEventListener('submit', function(event) {
+        event.preventDefault();
+    
+        const userId = document.getElementById('id').value; 
+        const oldPassword = document.getElementById('old-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+    
+        const data = new FormData();
+        data.append('id', userId); 
+        data.append('old-password', oldPassword);
+        data.append('new-password', newPassword);
+        data.append('confirm-password', confirmPassword);
+    
+        fetch('/update-password', {
+            method: 'POST',
+            body: data
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });    
+
+    if (changePasswordButton) {
+        changePasswordButton.addEventListener('click', function () {
+            passwordFields.style.display = passwordFields.style.display === 'none' ? 'block' : 'none';
+        });
+    }
 
     /**
      * Show login modal when logout button is clicked.
@@ -43,12 +162,8 @@ document.addEventListener('DOMContentLoaded', function () {
         logoutButton.addEventListener('click', function (event) {
             event.preventDefault();
             sideMenu.classList.remove('open');
-            loginModal.style.display = 'block';
+            openModal(loginModal);
         });
-    }
-
-    function closeModal(modal) {
-        modal.style.display = 'none';
     }
 
     const closeButtons = document.querySelectorAll('.close-modal');
@@ -59,33 +174,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function (event) {
-            event.preventDefault();  
-
-            const formData = new FormData(this);
-
-            fetch('/login', {
-                method: 'POST',
-                body: formData,
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === 'Login successful!') {
-                        loginModal.style.display = 'none';
-                        alert('Login successful!');  
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred during login.');
-                });
-        });
-    }
-
     /**
      * Show Sign Up Modal when sign Up button is clicked.
      */
@@ -94,45 +182,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (signUpButton && signUpModal) {
         signUpButton.addEventListener('click', function (event) {
             event.preventDefault();
-            loginModal.style.display = 'none';
-            signUpModal.style.display = 'block';
+            closeModal(loginModal);
+            openModal(signUpModal);
         });
     }
 
     window.addEventListener('click', function (event) {
-        if (loginModal && event.target === loginModal) {
-            closeModal(loginModal);
-        }
+        const modals = [loginModal, document.getElementById('grade-modal')];
+        modals.forEach(modal => {
+            if (modal && event.target === modal) {
+                closeModal(modal);
+            }
+        });
     });
 
+    /**
+     * Form submission handling.
+     */
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) handleFormSubmit(loginForm, '/login', 'Login successful!');
+
     const signUpForm = document.getElementById('sign-up-form');
-    if (signUpForm) {
-        signUpForm.addEventListener('submit', function (event) {
-            event.preventDefault();  // Prevent default form submission
-
-            const formData = new FormData(this);
-
-            fetch('/signup', {
-                method: 'POST',
-                body: formData,
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === 'Signup successful!') {
-                        // Close the modal or redirect the user
-                        signUpModal.style.display = 'none';
-                        alert('Signup successful!');  // Replace with better UI feedback
-                    } else {
-                        // Show error message inside the modal
-                        alert(data.message);  // Replace with a modal message if desired
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred during signup.');
-                });
-        });
-    }
+    if (signUpForm) handleFormSubmit(signUpForm, '/signup', 'Signup successful!');
 
     /**
      * Resume form submit handling.
@@ -151,13 +222,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 method: 'POST',
                 body: formData,
             })
-                .then((response) => {
-                    console.log('Upload response status:', response.status);
-                    return response.json();
-                })
+                .then(handleFetchResponse)
                 .then((data) => {
-                    console.log('Received grading result:', data);
-
                     if (!data || !data.grading_result) {
                         console.error('Invalid grading result:', data);
                         resultDiv.innerHTML = `<p style="color:red;">Error in processing resume grading.</p>`;
@@ -182,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const gradeModal = document.getElementById('grade-modal');
                     if (gradeModal) {
-                        gradeModal.style.display = 'block';
+                        openModal(gradeModal);
                     }
 
                     const downloadButton = document.getElementById('download-feedback');
@@ -202,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                 .catch((error) => {
-                    console.error('Error analyzing resume:', error);
+                    handleError(error, 'Error analyzing resume.');
                     resultDiv.innerHTML = `<p style="color:red;">Error analyzing resume.</p>`;
                 });
         });
@@ -228,12 +294,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 body: JSON.stringify({ message: input })
             })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Chat response not okay');
-                    }
-                    return response.json();
-                })
+                .then(handleFetchResponse)
                 .then(data => {
                     if (data.error) {
                         throw new Error(data.error);
@@ -242,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('chat-input').value = '';
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    handleError(error, 'Error sending message.');
                     chatLog.innerHTML += `<div style="color:red;">Error sending message: ${error.message}</div>`;
                 });
         });

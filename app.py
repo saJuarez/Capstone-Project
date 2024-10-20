@@ -14,8 +14,6 @@ load_dotenv()
 # Initialize the OpenAI client with the API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-print(f"API Key: {os.getenv('OPENAI_API_KEY')}")  # Print API key loaded from env file for validation
-
 # Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
@@ -34,7 +32,8 @@ def connect_to_db():
     except Exception as e:
         print(f"Error connecting to the database: {e}")
         return None
-    
+
+# Create the users table if it doesn't already exist    
 def create_user_table():
     connection = connect_to_db()
     if connection is None:
@@ -42,7 +41,6 @@ def create_user_table():
         return
     try:
         cursor = connection.cursor()
-        # Create the users table if it doesn't already exist
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -66,7 +64,7 @@ def insert_user(username, email, password):
         return None
     try:
         cursor = connection.cursor()
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')  # Hash the password
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')  # Hash a user's password
         cursor.execute('''
             INSERT INTO users (username, email, password)
             VALUES (%s, %s, %s)
@@ -82,7 +80,7 @@ def insert_user(username, email, password):
         print(f"Error inserting user: {e}")
         return None
 
-# Function to parse PDF files
+# Parse PDF files
 def parse_pdf(file_path):
     with pdfplumber.open(file_path) as pdf:
         text = ""
@@ -90,13 +88,13 @@ def parse_pdf(file_path):
             text += page.extract_text()
     return text
 
-# Function to parse DOCX files
+# Parse DOCX files
 def parse_docx(file_path):
     doc = docx.Document(file_path)
     text = "\n".join([para.text for para in doc.paragraphs])
     return text
 
-# Function to grade the resume based on different criteria using OpenAI
+# Grade the resume based on different criteria using OpenAI
 def grade_resume(resume_text):
     grading_criteria = {
         "Experience": "Evaluate how relevant the experience described in the resume is for the targeted job and suggest improvements.",
@@ -204,6 +202,7 @@ def chat():
         print(f"Error: {str(e)}")
         return jsonify({'error': f"Error generating reply: {str(e)}"}), 500
 
+# Signup route to create a new user
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
@@ -228,6 +227,7 @@ def signup():
         print(f"Error in signup route: {e}")
         return jsonify({'message': f"Error: {str(e)}"}), 500
 
+# Login route to authenticate a user
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form.get('email')
@@ -251,8 +251,6 @@ def login():
 @app.route('/')
 def index():
     return render_template('index.html')
-
-print(f"DB Password: {os.getenv('DB_PASSWORD')}")
 
 # Main block to run the Flask app
 if __name__ == '__main__':
