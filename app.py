@@ -1,20 +1,18 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify
 import os
 import pdfplumber
 import docx
 from openai import OpenAI
 from dotenv import load_dotenv
 import psycopg2
-from werkzeug.security import generate_password_hash
-from werkzeug.security import check_password_hash
+from psycopg2 import extras
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize the OpenAI client with the APIç key
+# Initialize the OpenAI client with the API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-print(f"API Key: {os.getenv('OPENAI_API_KEY')}")  # Print API key loaded from env file for validation
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -35,6 +33,7 @@ def connect_to_db():
         print(f"Error connecting to the database: {e}")
         return None
     
+# Create user table if it doesn't exist
 def create_user_table():
     connection = connect_to_db()
     if connection is None:
@@ -42,7 +41,6 @@ def create_user_table():
         return
     try:
         cursor = connection.cursor()
-        # Create the users table if it doesn't already exist
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -57,6 +55,30 @@ def create_user_table():
         print("User table created successfully.")
     except Exception as e:
         print(f"Error creating user table: {e}")
+
+# Create resume_feedback table to store feedback history
+def create_feedback_table():
+    connection = connect_to_db()
+    if connection is None:
+        print("Could not connect to the database.")
+        return
+    try:
+        cursor = connection.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS resume_feedback (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                resume_text TEXT NOT NULL,
+                feedback JSONB NOT NULL,
+                upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Resume feedback table created successfully.")
+    except Exception as e:
+        print(f"Error creating feedback table: {e}")
 
 # Insert a user into the users table
 def insert_user(username, email, password):
@@ -80,6 +102,26 @@ def insert_user(username, email, password):
         return user_id
     except Exception as e:
         print(f"Error inserting user: {e}")
+        return None
+
+# Save feedback to the resume_feedback table
+def save_feedback_to_db(user_id, resume_text, feedback):
+    connection = connect_to_db()
+    if connection is None:
+        print("Database connection failed.")
+        return None
+    try:
+        cursor = connection.cursor()
+        cursor.execute('''
+            INSERT INTO resume_feedback (user_id, resume_text, feedback)
+            VALUES (%s, %s, %s);
+        ''', (user_id, resume_text, psycopg2.extras.Json(feedback)))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Feedback saved to the database.")
+    except Exception as e:
+        print(f"Error saving feedback: {e}")
         return None
 
 # Function to parse PDF files
@@ -173,37 +215,46 @@ def upload_file():
     # Grade the parsed resume text using OpenAI API
     grading_result = grade_resume(resume_text)
 
-    # Debugging log to verify the grading result
-    print(f"Grading result: {grading_result}")
+    # Assuming you have the user_id available from the frontend
+    user_id = request.form.get('user_id')  # Ensure this is sent from the frontend
 
-    # Remove the uploaded file after analysis
+    # Save feedback to the database
+    save_feedback_to_db(user_id, resume_text, grading_result)
+
     os.remove(file_path)
 
-    # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
 
-# AI Chat Box route using OpenAI
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.json.get('message')
+# Route to view the grading history of a user
+@app.route('/history', methods=['GET'])
+def view_history():
+    user_id = request.args.get('user_id')  # Get the user ID from the frontend
 
-    if not user_message:
-        return jsonify({'error': 'No message provided'}), 400
-
+    connection = connect_to_db()
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": user_message}],
-            max_tokens=150,
-            temperature=0.7
-        )
-        # Extract the reply correctly using '.content'
-        reply = response.choices[0].message.content.strip()
-        return jsonify({'reply': reply})
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': f"Error generating reply: {str(e)}"}), 500
+        cursor = connection.cursor()
+        cursor.execute('''
+            SELECT resume_text, feedback, upload_date 
+            FROM resume_feedback 
+            WHERE user_id = %s ORDER BY upload_date DESC;
+        ''', (user_id,))
+        history = cursor.fetchall()
+        cursor.close()
+        connection.close()
 
+        # Format the data for display
+        formatted_history = [{
+            'resume_text': row[0],
+            'feedback': row[1],
+            'upload_date': row[2].strftime('%Y-%m-%d %H:%M:%S')  # Format the date nicely
+        } for row in history]
+
+        return jsonify({'history': formatted_history})
+    except Exception as e:
+        print(f"Error retrieving history: {e}")
+        return jsonify({'error': 'Failed to retrieve history'}), 500
+
+# Route for user signup
 @app.route('/signup', methods=['POST'])
 def signup():
     username = request.form.get('username')
@@ -225,19 +276,16 @@ def signup():
         cursor.close()
         connection.close()
 
-        # Return user ID to client
         return jsonify({'message': 'Signup successful!', 'user_id': user_id}), 200
     except Exception as e:
         print(f"Error creating user: {e}")
         return jsonify({'message': 'Signup failed.'}), 500
 
-
+# Route for user login
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form.get('email').lower()
     password = request.form.get('password')
-
-    print(f"Attempting login for email: {email}")
 
     connection = connect_to_db()
     try:
@@ -246,41 +294,28 @@ def login():
         user = cursor.fetchone()
 
         if user:
-            print(f"User found with email: {email}")
-            print(f"Stored hashed password: {user[1]}")
-
             if check_password_hash(user[1], password):
-                print("Password matched")
-
-                # Return user ID to client
                 return jsonify({'message': 'Login successful!', 'user_id': user[0]}), 200
             else:
-                print("Password mismatch")
                 return jsonify({'message': 'Invalid credentials'}), 401
         else:
-            print("No user found with that email")
             return jsonify({'message': 'Invalid credentials'}), 401
     except Exception as e:
         print(f"Error logging in: {e}")
         return jsonify({'message': 'Login failed.'}), 500
-
-
 
 # Root route to render the index page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-print(f"DB Password: {os.getenv('DB_PASSWORD')}")
-
 # Main block to run the Flask app
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    # Create the user table when the app starts
+    # Create tables when the app starts
     create_user_table()
+    create_feedback_table()
 
     app.run(debug=True)
-
-   

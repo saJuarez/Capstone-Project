@@ -23,11 +23,20 @@
                 </a>
             </li>
             <li>
-                <a href="#">
+                <a href="#" id="view-history-link">
                     <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
                     Rating History
                 </a>
             </li>
+            
+            <!-- Feedback History Section -->
+            <section id="history-section" style="display: none;">
+                <h2>Your Feedback History</h2>
+                <div id="history-container">
+                    <!-- Feedback history will be dynamically loaded here -->
+                </div>
+            </section>
+            
             <li>
                 <a href="#">
                     <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
@@ -41,6 +50,7 @@
         </a>
     </nav>
 
+    
     <!-- Login Modal -->
     <div id="login-modal" class="modal" aria-hidden="true">
         <div class="modal-content">
@@ -110,7 +120,11 @@
             <textarea id="chat-input" placeholder="Type your message here..." aria-label="Chat input area"></textarea>
             <button id="send-button" class="button">Send</button>
         </section>
+       
+    
     </main>
+
+    
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>

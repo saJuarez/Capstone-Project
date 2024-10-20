@@ -60,31 +60,34 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function (event) {
-            event.preventDefault();  
+if (loginForm) {
+    loginForm.addEventListener('submit', function (event) {
+        event.preventDefault();
 
-            const formData = new FormData(this);
+        const formData = new FormData(this);
 
-            fetch('/login', {
-                method: 'POST',
-                body: formData,
+        fetch('/login', {
+            method: 'POST',
+            body: formData,
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Login successful!') {
+                    // Store the user_id in localStorage for future use
+                    localStorage.setItem('user_id', data.user_id);
+                    loginModal.style.display = 'none';  // Close the login modal
+                    alert('Login successful!'); 
+                } else {
+                    alert(data.message);  // Display the error message if login failed
+                }
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === 'Login successful!') {
-                        loginModal.style.display = 'none';
-                        alert('Login successful!');  
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred during login.');
-                });
-        });
-    }
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during login.');
+            });
+    });
+}
+
 
     /**
      * Show Sign Up Modal when sign Up button is clicked.
@@ -317,5 +320,60 @@ document.addEventListener('DOMContentLoaded', function () {
             doc.save('resume_feedback.pdf');
         });
     });
+
     
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        const historyLink = document.getElementById('view-history-link');
+        const historySection = document.getElementById('history-section');
+        const historyContainer = document.getElementById('history-container');
+    
+        if (historyLink) {
+            historyLink.addEventListener('click', function (event) {
+                event.preventDefault();  // Prevent default link behavior
+    
+                const userId = localStorage.getItem('user_id');  // Get the logged-in user ID from localStorage
+    
+                if (!userId) {
+                    alert('You must be logged in to view your feedback history.');
+                    return;
+                }
+    
+                // Fetch the feedback history from the server
+                fetch(`/history?user_id=${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.history && data.history.length > 0) {
+                            // Clear any existing history
+                            historyContainer.innerHTML = '';
+    
+                            // Loop through feedback history and display it
+                            data.history.forEach(item => {
+                                const historyItem = document.createElement('div');
+                                historyItem.innerHTML = `
+                                    <div class="feedback-entry">
+                                        <p><strong>Date:</strong> ${new Date(item.upload_date).toLocaleString()}</p>
+                                        <p><strong>Resume Text:</strong> ${item.resume_text}</p>
+                                        <p><strong>Feedback:</strong> ${item.feedback}</p>
+                                    </div>
+                                    <hr>
+                                `;
+                                historyContainer.appendChild(historyItem);
+                            });
+    
+                            // Show the history section
+                            historySection.style.display = 'block';
+                        } else {
+                            historyContainer.innerHTML = `<p>No feedback history found.</p>`;
+                            historySection.style.display = 'block';  // Show the section even if empty
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching feedback history:', error);
+                        alert('An error occurred while fetching your feedback history.');
+                    });
+            });
+        }
+    });
+    
+    
+});    
