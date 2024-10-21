@@ -1,0 +1,20 @@
+/* Feedback History Container */
+#feedback-history-container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+    overflow-y: auto;
+    max-height: 90vh;
+}
+
+#feedback-history-content {
+    color: var(--text-color);
+}
+
+#feedback-history-content p {
+    font-size: 1.2rem;
+}

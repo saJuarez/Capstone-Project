@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import os
 import pdfplumber
 import docx
@@ -16,6 +16,7 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY') # Set secret key for session management
 app.config['UPLOAD_FOLDER'] = './uploads'
 
 # Connect to PostgreSQL database
@@ -33,7 +34,7 @@ def connect_to_db():
         print(f"Error connecting to the database: {e}")
         return None
 
-# Create the users table if it doesn't already exist    
+# Create users table 
 def create_user_table():
     connection = connect_to_db()
     if connection is None:
@@ -55,6 +56,30 @@ def create_user_table():
         print("User table created successfully.")
     except Exception as e:
         print(f"Error creating user table: {e}")
+
+# Create resume_feedback table 
+def create_feedback_table():
+    connection = connect_to_db()
+    if connection is None:
+        print("Could not connect to the database.")
+        return
+    try:
+        cursor = connection.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS resume_feedback (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                resume_text TEXT NOT NULL,
+                feedback JSONB NOT NULL,
+                upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Resume feedback table created successfully.")
+    except Exception as e:
+        print(f"Error creating feedback table: {e}")
 
 # Insert a user into the users table
 def insert_user(username, email, password):
@@ -79,6 +104,15 @@ def insert_user(username, email, password):
     except Exception as e:
         print(f"Error inserting user: {e}")
         return None
+
+
+@app.route('/settings')
+def settings():
+    if 'logged_in' in session and session['logged_in']:
+        return jsonify({'message': 'User is logged in'}), 200
+    else:
+        return jsonify({'error': 'You must be logged in to access settings.'}), 403
+
 
 # Parse PDF files
 def parse_pdf(file_path):
@@ -180,6 +214,25 @@ def upload_file():
     # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
 
+def save_feedback_to_db(user_id, resume_text, feedback):
+    connection = connect_to_db()
+    if connection is None:
+        print("Database connection failed.")
+        return None
+    try:
+        cursor = connection.cursor()
+        cursor.execute('''
+            INSERT INTO resume_feedback (user_id, resume_text, feedback)
+            VALUES (%s, %s, %s);
+        ''', (user_id, resume_text, psycopg2.extras.Json(feedback)))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Feedback saved to the database.")
+    except Exception as e:
+        print(f"Error saving feedback: {e}")
+        return None
+
 # AI Chat Box route using OpenAI
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -241,11 +294,53 @@ def login():
     if user:
         stored_password = user[3]
         if check_password_hash(stored_password, password):
+            session['user_id'] = user[0]  # Store user ID in session
+            session['logged_in'] = True 
             return jsonify({'message': 'Login successful!'}), 200
         else:
             return jsonify({'message': 'Invalid credentials.'}), 401
     else:
         return jsonify({'message': 'User not found.'}), 404
+    
+@app.route('/feedback-history')
+def feedback_history():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'You must be logged in first to access feedback history.'}), 403
+
+    return render_template('feedback-history.html')
+
+def get_feedback_history(user_id):
+    connection = connect_to_db()
+    if connection is None:
+        print("Database connection failed.")
+        return []
+    try:
+        cursor = connection.cursor()
+        cursor.execute('SELECT feedback, upload_date FROM resume_feedback WHERE user_id = %s ORDER BY upload_date DESC', (user_id,))
+        feedbacks = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        feedback_list = [{'feedback': row[0], 'upload_date': row[1].strftime('%Y-%m-%d %H:%M:%S')} for row in feedbacks]
+        return feedback_list
+    except Exception as e:
+        print(f"Error retrieving feedback history: {e}")
+        return []
+    
+@app.route('/api/feedback-history')
+def get_feedback_history_data():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'You must be logged in first to access feedback history.'}), 403
+
+    user_id = session.get('user_id')
+    feedbacks = get_feedback_history(user_id)
+    return jsonify({'feedbacks': feedbacks})
+
+# Clear session upon logout
+@app.route('/logout')
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out successfully'}), 200
 
 # Root route to render the index page
 @app.route('/')

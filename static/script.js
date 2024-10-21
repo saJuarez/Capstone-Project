@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
      * Helper functions
      */
     function openModal(modal) {
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
     }
 
     function closeModal(modal) {
@@ -69,6 +69,43 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Error Modal handling
+    const errorModal = document.getElementById('error-modal');
+    const errorMessage = document.getElementById('error-message');
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        openModal(errorModal);
+    }
+
+    window.addEventListener('click', function (event) {
+        if (event.target === errorModal) {
+            closeModal(errorModal);
+        }
+    });
+
+    // Feedback History click event handling
+    const feedbackHistoryLink = document.getElementById('feedback-history-link');
+    if (feedbackHistoryLink) {
+        feedbackHistoryLink.addEventListener('click', function (event) {
+            event.preventDefault();  
+            fetch('/feedback-history')
+                .then(response => {
+                    if (response.status === 403) {
+                        return response.json().then(data => {
+                            showError(data.error || 'You must be logged in first to view feedback history.');
+                        });
+                    } else if (response.ok) {
+                        // If logged in, redirect to feedback history page
+                        window.location.href = '/feedback-history';
+                    } else {
+                        handleError(new Error('Unexpected response'), 'Error checking login status.');
+                    }
+                })
+                .catch(error => handleError(error, 'Error checking login status.'));
+        });
+    }
+
     window.addEventListener('click', function (event) {
         closeIfClickedOutside(event.target, sideMenu, sidebarIcon);
     });
@@ -76,12 +113,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // Open settings modal
     const settingsLink = document.getElementById('settings-link');
     const settingsModal = document.getElementById('settings-modal');
-    if (settingsLink && settingsModal) {
+    if (settingsLink) {
         settingsLink.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal(settingsModal);
+            event.preventDefault(); 
+            fetch('/settings') // Fetch login status
+                .then(response => {
+                    if (response.status === 403) {
+                        return response.json().then(data => {
+                            showError(data.error || 'You must be logged in to access settings.');
+                        });
+                    } else if (response.ok) {
+                        openModal(settingsModal);
+                    } else {
+                        handleError(new Error('Unexpected response'), 'Error checking login status.');
+                    }
+                })
+                .catch(error => handleError(error, 'Error checking login status.'));
         });
     }
+
 
     window.addEventListener('click', function (event) {
         if (settingsModal && event.target === settingsModal) {
@@ -89,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Tab switching logic
+    // Setting tabs switching logic
     const tabLinks = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -99,7 +149,6 @@ document.addEventListener('DOMContentLoaded', function () {
             tabLinks.forEach(tab => tab.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
 
-            // Add active class to the clicked tab and the corresponding tab content
             const tabId = this.getAttribute('data-tab');
             document.getElementById(tabId).classList.add('active');
             this.classList.add('active');
@@ -117,34 +166,34 @@ document.addEventListener('DOMContentLoaded', function () {
     const changePasswordButton = document.getElementById('change-password-button');
     const passwordFields = document.getElementById('password-fields');
 
-    document.getElementById('password-fields').addEventListener('submit', function(event) {
+    document.getElementById('password-fields').addEventListener('submit', function (event) {
         event.preventDefault();
-    
-        const userId = document.getElementById('id').value; 
+
+        const userId = document.getElementById('id').value;
         const oldPassword = document.getElementById('old-password').value;
         const newPassword = document.getElementById('new-password').value;
         const confirmPassword = document.getElementById('confirm-password').value;
-    
+
         const data = new FormData();
-        data.append('id', userId); 
+        data.append('id', userId);
         data.append('old-password', oldPassword);
         data.append('new-password', newPassword);
         data.append('confirm-password', confirmPassword);
-    
+
         fetch('/update-password', {
             method: 'POST',
             body: data
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    });    
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
 
     if (changePasswordButton) {
         changePasswordButton.addEventListener('click', function () {
@@ -161,8 +210,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (logoutButton) {
         logoutButton.addEventListener('click', function (event) {
             event.preventDefault();
-            sideMenu.classList.remove('open');
-            openModal(loginModal);
+            fetch('/logout')
+                .then(handleFetchResponse)
+                .then(data => {
+                    alert(data.message);
+                    sideMenu.classList.remove('open');
+                    openModal(loginModal);
+                })
+                .catch(error => handleError(error, 'Error logging out.'));
         });
     }
 
