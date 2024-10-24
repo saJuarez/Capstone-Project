@@ -1,57 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale 1.0">
-        <title>Job Recommendations</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    </head>
-    <body>
-        <div class="container" style="max-width: 1200px;">
-            <h1>Job Recommendations</h1>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Listing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <!-- Side Menu -->
+    <div id="sidebar-icon" aria-label="Open side menu">
+        <img src="../static/images/icons/sidebar-icon.svg" alt="Menu icon" width="40" height="40">
+    </div>
 
-            <form action="/jobs" method="POST">
-                <label for="location">Location:</label>
-                <input type="text" id="location" name="location" placeholder="New York, Remote">
+    <nav id="side-menu" aria-label="Sidebar navigation">
+        <button id="close-menu" aria-label="Close side menu">&times;</button>
+        <ul>
+            <li>
+                <a href="#">
+                    <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
+                    Jobs
+                </a>
+            </li>
+            <li>
+                <a href="#" id="view-history-link">
+                    <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
+                    Rating History
+                </a>
+            </li>
+            
+            <!-- Feedback History Section -->
+            <section id="history-section" style="display: none;">
+                <h2>Your Feedback History</h2>
+                <div id="history-container">
+                    <!-- Feedback history will be dynamically loaded here -->
+                </div>
+            </section>
+            
+            <li>
+                <a href="#">
+                    <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
+                    Settings
+                </a>
+            </li>
+        </ul>
+        <a href="#" id="logout-button">
+            <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
+            Logout
+        </a>
+    </nav>
 
-                <label for="job-title">Job Title:</label>
-                <input type="text" id="job-title" name="title" placeholder="Software Engineer">
+    <div class="job-container">
+        <!-- Job Listings Sidebar -->
+        <div class="job-listings">
+            <h2>Job Listings</h2>
 
-                <label for="salary-min">Minium Salary:</label>
-                <input type="number" id="salary-min" name="salary" placeholder="50000">
+            <!-- Example Job 1 -->
+            <div class="job-listing" onclick="showJobDetails(1)">
+                <h3>Software Engineer</h3>
+                <p>New York, NY - $120,000</p>
+            </div>
 
-                <label for="experience">Experience:</label>
-                <select id="experience" name="experience_level">
-                    <option value="">Any</option>
-                    <option value="entry">Entry-level</option>
-                    <option value="mid">Mid-level</option>
-                    <option value="senior">Senior-level</option>
-                </select>
-                <button type="submit">Filter Jobs</button>
-            </form>
+            <!-- Example Job 2 -->
+            <div class="job-listing" onclick="showJobDetails(2)">
+                <h3>Data Scientist</h3>
+                <p>Greensboro, NC - $130,000</p>
+            </div>
 
-            <div id="results">
-                <table>
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Location</th>
-                        <th>Salary</th>
-                        <th>Experience Level</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in results %}
-                    <tr>
-                        <td>{{ item[1] }}</td>
-                        <td>{{ item[2] }}</td>
-                        <td>{{ item[3] }}</td>
-                        <td>{{ item[4] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                </table>
+            <!-- Example Job 3 -->
+            <div class="job-listing" onclick="showJobDetails(3)">
+                <h3>Product Manager</h3>
+                <p>Charlotte, NC - $110,000</p>
             </div>
         </div>
-    </body>
+
+        <!-- Job Details Section -->
+        <div class="job-details-section">
+            <div id="job-details" class="job-details-content">
+                <h3>Job Title</h3>
+                <p><strong>Location:</strong> - </p>
+                <p><strong>Salary:</strong> - </p>
+                <p><strong>Description:</strong> Select a job to view the details.</p>
+                <div class="apply-button" id="apply-button" style="display: none;">
+                    <a href="#" target="_blank">Apply</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showJobDetails(jobId) {
+            const jobDetails = document.getElementById('job-details');
+            let content = '';
+
+            switch (jobId) {
+                case 1:
+                    content = `
+                        <h3>Software Engineer</h3>
+                        <p><strong>Location:</strong> New York, NY</p>
+                        <p><strong>Salary:</strong> $120,000</p>
+                        <p><strong>Description:</strong> Develop and maintain web applications.</p>
+                        <div class="apply-button">
+                            <a href="https://example.com/apply-software-engineer" target="_blank">Apply</a>
+                        </div>
+                    `;
+                    break;
+                case 2:
+                    content = `
+                        <h3>Data Scientist</h3>
+                        <p><strong>Location:</strong> Greensboro, NC</p>
+                        <p><strong>Salary:</strong> $130,000</p>
+                        <p><strong>Description:</strong> Analyze large datasets and build predictive models.</p>
+                        <div class="apply-button">
+                            <a href="https://example.com/apply-data-scientist" target="_blank">Apply</a>
+                        </div>
+                    `;
+                    break;
+                case 3:
+                    content = `
+                        <h3>Product Manager</h3>
+                        <p><strong>Location:</strong> Charlotte, NC</p>
+                        <p><strong>Salary:</strong> $110,000</p>
+                        <p><strong>Description:</strong> Manage product development and strategy.</p>
+                        <div class="apply-button">
+                            <a href="https://example.com/apply-product-manager" target="_blank">Apply</a>
+                        </div>
+                    `;
+                    break;
+            }
+
+            jobDetails.innerHTML = content;
+            jobDetails.style.display = 'block';
+        }
+    </script>
+ <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
 </html>
