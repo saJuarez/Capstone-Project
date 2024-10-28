@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Search Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='jobs.css') }}"> 
+    <script src="{{ url_for('static', filename='jobs.js') }}" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Job Search Results</h1>
+        <button id="back-button">Back to Dashboard</button>
+    </header>
+    <main>
+        <div id="job-results-container">
+            <!-- Job results will be populated here -->
+        </div>
+    </main>
+</body>
+</html>

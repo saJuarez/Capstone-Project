@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Analyzer</title>
+    <title>Feedback History | AI Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='feedback-history.css') }}">
 </head>
 <body>
     <!-- Side Menu -->
@@ -17,18 +17,17 @@
         <button id="close-menu" aria-label="Close side menu">&times;</button>
         <ul>
             <li>
-                <a href="/jobs" id="jobs-link">
+                <a href="{{ url_for('index') }}">
+                    <img src="../static/images/icons/home-icon.svg" alt="Home icon" width="24" height="24">
+                    Home
+                </a>
+            </li>
+            <li>
+                <a href="#">
                     <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
                     Jobs
                 </a>
-            </li>                       
-            <li>
-                <a href="/feedback-history" id="feedback-history-link">
-                    <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
-                    Feedback History
-                </a>
             </li>
-            
             <li>
                 <a href="#" id="settings-link">
                     <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
@@ -36,11 +35,11 @@
                 </a>
             </li>
         </ul>
-        <a href="/logout" id="logout-button">
+        <a href="#" id="logout-button">
             <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
             Logout
         </a>
-    </nav>    
+    </nav>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
@@ -53,37 +52,40 @@
                     <button class="tab-link" data-tab="general">General</button>
                 </div>
 
+                <div id="general" class="tab-content">
+                    <h3>General Settings</h3>
+                    <p>Customize general settings here.</p>
+                </div>
+                
                 <div id="tab-contents">
                     <!-- Account settings-->
                     <div id="account" class="tab-content active">
                         <!-- Change password -->
                         <div id="change-password-section" class="mb-20">
                             <label for="password">Password:</label>
-                            <button type="button" id="change-password-button" class="button tertiary-bg small">Change
-                                Password</button>
+                            <button type="button" id="change-password-button" class="button tertiary-bg small">Change Password</button>
 
                             <div id="password-fields" style="display: none; margin-top: 20px;">
                                 <label for="old-password">Old Password:</label>
                                 <input type="password" id="old-password" name="old-password" required>
+
                                 <label for="new-password">New Password:</label>
                                 <input type="password" id="new-password" name="new-password" required>
+
                                 <label for="confirm-password">Confirm New Password:</label>
                                 <input type="password" id="confirm-password" name="confirm-password" required>
+
                                 <button type="submit" class="button primary-bg small">Save New Password</button>
                             </div>
                         </div>
-                    </div>
-
-                    <div id="general" class="tab-content">
-                        <h3>General Settings</h3>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-     <!-- Login Modal -->
-     <div id="login-modal" class="modal">
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
         <div class="modal-content">
             <button class="close-modal">&times;</button>
             <h2>Log In</h2>
@@ -95,15 +97,6 @@
                 <button type="submit" id="login-button" class="button tertiary-bg">Log In</button>
                 <button type="button" id="sign-up-button" class="button primary-bg">Sign Up</button>
             </form>
-        </div>
-    </div>
-
-    <!-- Error Modal -->
-    <div id="error-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <button class="close-modal">&times;</button>
-            <h2>Error</h2>
-            <p id="error-message">You must be logged in first!</p>
         </div>
     </div>
 
@@ -125,42 +118,21 @@
     </div>
 
     <!-- Main Content -->
-    <main id="main-container">
-        <h1 class="mb-20">AI Resume Analyzer</h1>
-        <p class="mb-30">Upload your resume as a PDF or DOCX file and let our AI analyze it!</p>
-
-        <form id="resume-form" action="/upload" method="POST" enctype="multipart/form-data">
-            <label for="resume-upload" class="upload-label">Choose PDF or DOC File</label>
-            <input type="file" id="resume-upload" name="resume" accept=".pdf, .doc, .docx" required>
-            <button type="submit" id="upload-resume-button" class="button tertiary-bg">Upload Resume</button>
-        </form>
-
-        <div id="analysis-result" class="mb-20"></div>
-
-        <!-- Modal Structure -->
-        <div id="grade-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <button class="close-modal">&times;</button>
-                <h2>Grade Result</h2>
-                <p id="grade-result"></p>
-                <ul id="feedback-list"></ul>
-                <button id="download-feedback" class="button primary-bg">Download Feedback</button>
-            </div>
-        </div>
-      
-        <!-- AI Chat Box -->
-        <section class="chat-box">
-            <h2>AI Chat Box</h2>
-            <div id="chat-log"></div>
-            <textarea id="chat-input" placeholder="Type your message here..."></textarea>
-            <button id="send-button" class="button">Send</button>
-        </section>
-       
-    
+    <main id="feedback-history-container">
+        <h1 class="mb-20">Your Feedback History</h1>
+        <div id="feedback-history-content"></div>        
     </main>
 
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Feedback Details</h2>
+            <div id="feedback-modal-content"></div>
+        </div>
+    </div>
     
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='feedback-history.js') }}"></script>
 </body>
 </html>
