@@ -1,0 +1,130 @@
+/* General Styles */
+body {
+    font-family: var(--font-family);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    color: var(--dark-gray);
+}
+
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+#back-button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+#back-button:hover {
+    background-color: #2980b9;
+}
+
+main {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+#job-results-container {
+    color: var(--text-color);
+}
+
+.job-entry {
+    background-color: var(--light-gray);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.job-entry p {
+    margin: 10px 0;
+}
+
+.job-entry strong {
+    color: var(--primary-color);
+}
+
+.job-entry a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+.job-entry a:hover {
+    text-decoration: underline;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20px 0;
+}
+
+/* Utility Classes for Spacing */
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.mb-30 {
+    margin-bottom: 30px;
+}
+
+/* Container Styles */
+#job-results-container {
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    background-color: #fff; /* White background for contrast */
+}
+
+/* Additional styling for buttons and links if needed */
+.button {
+    padding: 12px 30px;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    background-color: var(--primary-color);
+}
+
+.button:hover {
+    background-color: rgba(52, 152, 219, 0.9); 
+    color: #333; 
+}
+
+/* Ensure responsiveness */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    #back-button {
+        width: 100%;
+    }
+}

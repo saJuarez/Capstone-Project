@@ -122,7 +122,17 @@
         <h1 class="mb-20">Your Feedback History</h1>
         <div id="feedback-history-content"></div>        
     </main>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Feedback Details</h2>
+            <div id="feedback-modal-content"></div>
+        </div>
+    </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
     <script src="{{ url_for('static', filename='feedback-history.js') }}"></script>
 </body>
 </html>

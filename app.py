@@ -1,22 +1,27 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect
 import os
 import pdfplumber
 import docx
+import requests
 from openai import OpenAI
 from dotenv import load_dotenv
 import psycopg2
-from werkzeug.security import generate_password_hash
-from werkzeug.security import check_password_hash
+from psycopg2 import extras
+from werkzeug.security import generate_password_hash, check_password_hash
+import spacy
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Load the English NLP model from spaCy
+nlp = spacy.load("en_core_web_sm")
 
 # Initialize the OpenAI client with the API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY') # Set secret key for session management
+app.secret_key = os.getenv('SECRET_KEY')  # Set secret key for session management
 app.config['UPLOAD_FOLDER'] = './uploads'
 
 # Connect to PostgreSQL database
@@ -81,6 +86,31 @@ def create_feedback_table():
     except Exception as e:
         print(f"Error creating feedback table: {e}")
 
+# Create jobs table 
+def create_jobs_table():
+    connection = connect_to_db()
+    if connection is None:
+        print("Could not connect to the database.")
+        return
+    try:
+        cursor = connection.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS jobs (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255),
+                description TEXT,
+                company VARCHAR(255),
+                location VARCHAR(255),
+                posted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print("Jobs table created successfully.")
+    except Exception as e:
+        print(f"Error creating jobs table: {e}")
+
 # Insert a user into the users table
 def insert_user(username, email, password):
     connection = connect_to_db()
@@ -105,15 +135,6 @@ def insert_user(username, email, password):
         print(f"Error inserting user: {e}")
         return None
 
-
-@app.route('/settings')
-def settings():
-    if 'logged_in' in session and session['logged_in']:
-        return jsonify({'message': 'User is logged in'}), 200
-    else:
-        return jsonify({'error': 'You must be logged in to access settings.'}), 403
-
-
 # Parse PDF files
 def parse_pdf(file_path):
     with pdfplumber.open(file_path) as pdf:
@@ -135,7 +156,8 @@ def grade_resume(resume_text):
         "Skills": "Evaluate the relevance and proficiency of the listed skills in the resume and suggest ways to enhance the skills section.",
         "Education": "Does the educational background align with the required qualifications for the job? Suggest improvements if needed.",
         "Clarity and Grammar": "Evaluate whether the resume is clear, well-written, and free of grammar mistakes, and provide suggestions for improvement.",
-        "Formatting": "Evaluate the organization and formatting of the resume and suggest any improvements for better presentation."
+        "Formatting": "Evaluate the organization and formatting of the resume and suggest any improvements for better presentation.",
+        "Portfolio": "Evaluate the relevance of the portfolio provided and suggest improvements."
     }
 
     grades = {}
@@ -211,6 +233,11 @@ def upload_file():
     # Remove the uploaded file after analysis
     os.remove(file_path)
 
+    # Save feedback to the database
+    user_id = session.get('user_id')
+    if user_id:
+        save_feedback_to_db(user_id, resume_text, grading_result)
+
     # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
 
@@ -233,28 +260,6 @@ def save_feedback_to_db(user_id, resume_text, feedback):
         print(f"Error saving feedback: {e}")
         return None
 
-# AI Chat Box route using OpenAI
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.json.get('message')
-
-    if not user_message:
-        return jsonify({'error': 'No message provided'}), 400
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": user_message}],
-            max_tokens=150,
-            temperature=0.7
-        )
-        # Extract the reply correctly using '.content'
-        reply = response.choices[0].message.content.strip()
-        return jsonify({'reply': reply})
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': f"Error generating reply: {str(e)}"}), 500
-
 # Signup route to create a new user
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -269,8 +274,7 @@ def signup():
         if len(username) > 150 or len(email) > 200 or len(password) > 200:
             return jsonify({'message': 'Input values are too long.'}), 400
 
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
-        user_id = insert_user(username, email, hashed_password)
+        user_id = insert_user(username, email, password)
 
         if user_id:
             return jsonify({'message': 'Signup successful!'}), 200
@@ -293,20 +297,23 @@ def login():
 
     if user:
         stored_password = user[3]
-        if check_password_hash(stored_password, password):
+        
+        if check_password_hash(stored_password, password):  
             session['user_id'] = user[0]  # Store user ID in session
             session['logged_in'] = True 
+            print("User logged in:", session['user_id']) 
             return jsonify({'message': 'Login successful!'}), 200
         else:
+            print("Password verification failed.")
             return jsonify({'message': 'Invalid credentials.'}), 401
     else:
+        print("User not found for email:", email)
         return jsonify({'message': 'User not found.'}), 404
-    
+
 @app.route('/feedback-history')
 def feedback_history():
     if not session.get('logged_in'):
         return jsonify({'error': 'You must be logged in first to access feedback history.'}), 403
-
     return render_template('feedback-history.html')
 
 def get_feedback_history(user_id):
@@ -326,7 +333,7 @@ def get_feedback_history(user_id):
     except Exception as e:
         print(f"Error retrieving feedback history: {e}")
         return []
-    
+
 @app.route('/api/feedback-history')
 def get_feedback_history_data():
     if not session.get('logged_in'):
@@ -336,11 +343,90 @@ def get_feedback_history_data():
     feedbacks = get_feedback_history(user_id)
     return jsonify({'feedbacks': feedbacks})
 
+@app.route('/api/check-login-status')
+def check_login_status():
+    return jsonify({"logged_in": session.get('logged_in', False)})
+
 # Clear session upon logout
 @app.route('/logout')
 def logout():
     session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
+
+@app.route('/jobs')
+def jobs():
+    if not session.get('logged_in'):
+        return redirect('/')  # Redirect to homepage if not logged in
+    return render_template('jobs.html') 
+
+# Job search route
+@app.route('/job-search', methods=['GET'])
+def job_search():
+    user_id = request.args.get('user_id')
+    location = request.args.get('location', 'USA')  
+    job_title = request.args.get('job_title', None)  
+    
+    connection = connect_to_db()
+    try:
+        cursor = connection.cursor()
+        cursor.execute('SELECT resume_text FROM resume_feedback WHERE user_id = %s ORDER BY upload_date DESC LIMIT 1;', (user_id,))
+        result = cursor.fetchone()
+        cursor.close()
+        connection.close()
+
+        if result:
+            resume_text = result[0]
+            # Extract relevant keywords (e.g., skills) from the resume
+            keywords = extract_skills_from_resume(resume_text)
+            
+            # Call Adzuna API with extracted keywords and location
+            api_url = f"https://api.adzuna.com/v1/api/jobs/us/search/1"
+            params = {
+                'app_id': os.getenv('ADZUNA_APP_ID'),  
+                'app_key': os.getenv('ADZUNA_APP_KEY'),
+                'what': job_title or ','.join(keywords),  # Search by job title or extracted skills
+                'where': location,  # default to 'USA'
+                'results_per_page': 10
+            }
+            response = requests.get(api_url, params=params)
+            
+            if response.status_code == 200:
+                job_results = response.json()
+                return jsonify({'jobs': job_results})
+            else:
+                return jsonify({'error': 'Failed to fetch job listings'}), 500
+        else:
+            return jsonify({'error': 'No resume found for user'}), 404
+    except Exception as e:
+        print(f"Error during job search: {e}")
+        return jsonify({'error': 'Failed to search for jobs'}), 500
+
+# Define skill-related keywords and patterns to detect skills contextually
+SKILL_PATTERNS = ['proficient in', 'experience with', 'familiar with', 'worked on', 'skills in', 'expertise in']
+
+# Function to extract skills from resume text in a flexible way
+def extract_skills_from_resume(resume_text):
+    doc = nlp(resume_text)
+    
+    extracted_skills = set()
+
+    for sent in doc.sents:  # Iterate over sentences
+        sentence_text = sent.text.lower()
+        for pattern in SKILL_PATTERNS:
+            if pattern in sentence_text:
+                for token in sent:
+                    if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 1:
+                        extracted_skills.add(token.text)
+
+    for token in doc:
+        if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 1:
+            extracted_skills.add(token.text)
+
+    for chunk in doc.noun_chunks:
+        extracted_skills.add(chunk.text)
+
+    # Return the final set of skills found
+    return list(extracted_skills)
 
 # Root route to render the index page
 @app.route('/')
@@ -352,7 +438,9 @@ if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
 
-    # Create the user table when the app starts
+    # Create tables when the app starts
     create_user_table()
+    create_feedback_table()
+    create_jobs_table()  # Create jobs table if it doesn't exist
 
     app.run(debug=True)

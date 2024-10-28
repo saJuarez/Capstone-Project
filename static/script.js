@@ -19,9 +19,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleFetchResponse(response) {
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            console.error(`Error: ${response.status} ${response.statusText}`);
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'An unknown error occurred');
+            });
+        }
         return response.json();
     }
+
 
     function handleError(error, message = 'An error occurred.') {
         console.error(error);
@@ -88,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const feedbackHistoryLink = document.getElementById('feedback-history-link');
     if (feedbackHistoryLink) {
         feedbackHistoryLink.addEventListener('click', function (event) {
-            event.preventDefault();  
+            event.preventDefault();
             fetch('/feedback-history')
                 .then(response => {
                     if (response.status === 403) {
@@ -115,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const settingsModal = document.getElementById('settings-modal');
     if (settingsLink) {
         settingsLink.addEventListener('click', function (event) {
-            event.preventDefault(); 
+            event.preventDefault();
             fetch('/settings') // Fetch login status
                 .then(response => {
                     if (response.status === 403) {
@@ -363,4 +369,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    /**
+     * Job Search Handling.
+     */
+    const jobsLink = document.getElementById('jobs-link');
+    if (jobsLink) {
+        jobsLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            fetch('/api/check-login-status')  // Check login status
+                .then(handleFetchResponse)
+                .then(data => {
+                    if (data.logged_in) {
+                        window.location.href = '/jobs';  // Redirect to jobs page
+                    } else {
+                        alert('You must be logged in to view job matches.');
+                        window.location.href = '/';  // Redirect to index if not logged in
+                    }
+                })
+                .catch(error => handleError(error, 'Error checking login status.'));
+        });
+    }
+    
 });

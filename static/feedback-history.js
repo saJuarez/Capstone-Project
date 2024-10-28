@@ -1,57 +1,6 @@
-let feedbackData = null;
-
 document.addEventListener('DOMContentLoaded', function () {
     /**
-     * Helper functions
-     */
-    function openModal(modal) {
-        modal.style.display = 'flex';
-    }
-
-    function closeModal(modal) {
-        modal.style.display = 'none';
-    }
-
-    function closeIfClickedOutside(target, element, icon) {
-        if (element && element.classList.contains('open') && target !== element && !element.contains(target) && target !== icon && !icon.contains(target)) {
-            element.classList.remove('open');
-        }
-    }
-
-    function handleFetchResponse(response) {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    }
-
-    function handleError(error, message = 'An error occurred.') {
-        console.error(error);
-        alert(message);
-    }
-
-    function handleFormSubmit(form, url, successMessage) {
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            const formData = new FormData(form);
-            fetch(url, {
-                method: 'POST',
-                body: formData
-            })
-                .then(handleFetchResponse)
-                .then(data => {
-                    if (data.message === successMessage) {
-                        closeModal(form.closest('.modal'));
-                        alert(successMessage);
-                    } else {
-                        alert(data.message);
-                    }
-                })
-                .catch(error => handleError(error, `An error occurred during ${url.split('/').pop()}.`));
-        });
-    }
-
-    /**
-     * Sidebar toggle handling.
+     * Sidebar functionality
      */
     const sidebarIcon = document.getElementById('sidebar-icon');
     const sideMenu = document.getElementById('side-menu');
@@ -70,184 +19,120 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     window.addEventListener('click', function (event) {
-        closeIfClickedOutside(event.target, sideMenu, sidebarIcon);
-    });
-
-    // Open settings modal
-    const settingsLink = document.getElementById('settings-link');
-    const settingsModal = document.getElementById('settings-modal');
-    if (settingsLink && settingsModal) {
-        settingsLink.addEventListener('click', function (event) {
-            event.preventDefault();
-            openModal(settingsModal);
-        });
-    }
-
-    window.addEventListener('click', function (event) {
-        if (settingsModal && event.target === settingsModal) {
-            closeModal(settingsModal);
+        if (!sideMenu.contains(event.target) && !sidebarIcon.contains(event.target)) {
+            sideMenu.classList.remove('open');
         }
     });
 
-    // Tab switching logic
-    const tabLinks = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
+    /**
+     * Helper functions for Base64 encoding/decoding that handle Unicode characters
+     */
+    function encodeToBase64(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+            String.fromCharCode('0x' + p1)
+        ));
+    }
 
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function () {
-            // Remove active class from all tabs and tab contents
-            tabLinks.forEach(tab => tab.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
+    function decodeFromBase64(str) {
+        return decodeURIComponent(atob(str).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+    }
 
-            // Add active class to the clicked tab and the corresponding tab content
-            const tabId = this.getAttribute('data-tab');
-            document.getElementById(tabId).classList.add('active');
-            this.classList.add('active');
-        });
-    });
-
-    document.querySelectorAll('.close-modal').forEach(button => {
-        button.addEventListener('click', function () {
-            const modal = button.closest('.modal');
-            closeModal(modal);
-        });
-    });
-
-    // Toggle password fields when the "Change Password" button is clicked
-    const changePasswordButton = document.getElementById('change-password-button');
-    const passwordFields = document.getElementById('password-fields');
-
-    document.getElementById('password-fields').addEventListener('submit', function(event) {
-        event.preventDefault();
-    
-        const userId = document.getElementById('id').value; 
-        const oldPassword = document.getElementById('old-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-    
-        const data = new FormData();
-        data.append('id', userId); 
-        data.append('old-password', oldPassword);
-        data.append('new-password', newPassword);
-        data.append('confirm-password', confirmPassword);
-    
-        fetch('/update-password', {
-            method: 'POST',
-            body: data
-        })
+    // Check if the user is logged in; if not, redirect to the homepage
+    fetch('/api/check-login-status')
         .then(response => response.json())
         .then(data => {
-            if (data.message) {
-                alert(data.message);
+            console.log("Fetched feedback data:", data);
+            if (!data.logged_in) {
+                window.location.href = '/';
+            }
+        })
+        .catch(error => console.error('Error verifying login status:', error));
+
+    /**
+     * Fetch and display feedback history
+     */
+    const feedbackHistoryContainer = document.getElementById('feedback-history-content');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const feedbackModalContent = document.getElementById('feedback-modal-content');
+    const closeModalButton = feedbackModal.querySelector('.close-modal');
+
+    fetch('/api/feedback-history')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                feedbackHistoryContainer.innerHTML = `<p>${data.error}</p>`;
+            } else if (data.feedbacks.length === 0) {
+                feedbackHistoryContainer.innerHTML = '<p>No feedback history found yet.</p>';
+            } else {
+                let feedbackList = '<ul>';
+                data.feedbacks.forEach(item => {
+                    const feedbackJson = encodeToBase64(JSON.stringify(item.feedback)); // Safely encode JSON
+                    
+                    feedbackList += `
+                        <li class="feedback-card">
+                            <h2>Feedback from ${item.upload_date}</h2>
+                            <button class="button view-feedback" data-feedback="${feedbackJson}">View Feedback</button>
+                            <button class="button download-feedback" data-feedback="${feedbackJson}">Download Feedback</button>
+                        </li>`;
+                });
+                
+                feedbackList += '</ul>';
+                feedbackHistoryContainer.innerHTML = feedbackList;
+
+                // Event listener for view feedback button
+                document.querySelectorAll('.view-feedback').forEach(button => {
+                    button.addEventListener('click', function () {
+                        try {
+                            const feedbackData = decodeFromBase64(this.getAttribute('data-feedback')); // Decode JSON
+                            const feedback = JSON.parse(feedbackData); // Parse JSON
+
+                            feedbackModalContent.innerHTML = formatFeedback(feedback);
+                            feedbackModal.style.display = 'flex';
+                        } catch (error) {
+                            console.error('Error parsing feedback data:', error);
+                        }
+                    });
+                });
+
+                // Event listener for download feedback button
+                document.querySelectorAll('.download-feedback').forEach(button => {
+                    button.addEventListener('click', function () {
+                        try {
+                            const feedbackData = decodeFromBase64(this.getAttribute('data-feedback')); 
+                            const feedback = JSON.parse(feedbackData); // Parse JSON
+                            downloadFeedback(feedback);
+                        } catch (error) {
+                            console.error('Error parsing feedback data:', error);
+                        }
+                    });
+                });
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error fetching feedback history:', error);
+            feedbackHistoryContainer.innerHTML = '<p>Error fetching feedback history.</p>';
         });
-    });    
 
-    if (changePasswordButton) {
-        changePasswordButton.addEventListener('click', function () {
-            passwordFields.style.display = passwordFields.style.display === 'none' ? 'block' : 'none';
-        });
-    }
-
-    /**
-     * Show login modal when logout button is clicked.
-     */
-    const logoutButton = document.getElementById('logout-button');
-    const loginModal = document.getElementById('login-modal');
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            sideMenu.classList.remove('open');
-            openModal(loginModal);
-        });
-    }
-
-    const closeButtons = document.querySelectorAll('.close-modal');
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const modal = button.closest('.modal');
-            closeModal(modal);
-        });
+    // Close modal when the close button is clicked
+    closeModalButton.addEventListener('click', function () {
+        feedbackModal.style.display = 'none';
     });
 
-    /**
-     * Show Sign Up Modal when sign Up button is clicked.
-     */
-    const signUpButton = document.getElementById('sign-up-button');
-    const signUpModal = document.getElementById('sign-up-modal');
-    if (signUpButton && signUpModal) {
-        signUpButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            closeModal(loginModal);
-            openModal(signUpModal);
-        });
-    }
-
+    // Close modal when clicking outside the modal content
     window.addEventListener('click', function (event) {
-        const modals = [loginModal, document.getElementById('grade-modal')];
-        modals.forEach(modal => {
-            if (modal && event.target === modal) {
-                closeModal(modal);
-            }
-        });
-    });
-
-    /**
-     * Form submission handling.
-     */
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) handleFormSubmit(loginForm, '/login', 'Login successful!');
-
-    const signUpForm = document.getElementById('sign-up-form');
-    if (signUpForm) handleFormSubmit(signUpForm, '/signup', 'Signup successful!');
-
-    const feedbackHistoryContainer = document.getElementById('feedback-history-content');
-
-    fetch('/api/feedback-history')
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            feedbackHistoryContainer.innerHTML = `<p>${data.error}</p>`;
-        } else if (data.feedbacks.length === 0) {
-            feedbackHistoryContainer.innerHTML = '<p>No feedback history found yet.</p>';
-        } else {
-            let feedbackList = '<ul>';
-            data.feedbacks.forEach(item => {
-                feedbackList += `<li>
-                    <h2>Feedback from ${item.upload_date}</h2>
-                    <h3>Final Grade: ${item.feedback.final_grade}</h3>
-                    <h4>Detailed Feedback:</h4>
-                    <ul>`;
-                
-                // Iterate over each grading criterion
-                for (const [criterion, details] of Object.entries(item.feedback.grades)) {
-                    feedbackList += `<li>
-                        <strong>${criterion}</strong>: 
-                        <p><strong>Feedback:</strong> ${details.feedback}</p>
-                        <p><strong>Score:</strong> ${details.score}</p>
-                    </li>`;
-                }
-
-                feedbackList += `</ul></li>`;
-            });
-            feedbackList += '</ul>';
-            feedbackHistoryContainer.innerHTML = feedbackList;
+        if (event.target === feedbackModal) {
+            feedbackModal.style.display = 'none';
         }
-    })
-    .catch(error => {
-        console.error('Error fetching feedback history:', error);
-        feedbackHistoryContainer.innerHTML = '<p>Error fetching feedback history.</p>';
     });
 });
 
-// Function to format the feedback object into a readable string
+/**
+ * Function to format the feedback object into a readable string
+ */
 function formatFeedback(feedback) {
     let formattedFeedback = `<strong>Final Grade: ${feedback.final_grade}</strong><br><br>`;
-
     formattedFeedback += "<strong>Grades:</strong><ul>";
     Object.keys(feedback.grades).forEach(criteria => {
         formattedFeedback += `
@@ -260,4 +145,23 @@ function formatFeedback(feedback) {
     });
     formattedFeedback += "</ul>";
     return formattedFeedback;
+}
+
+/**
+ * Function to download the feedback as a PDF
+ */
+function downloadFeedback(feedback) {
+    let feedbackContent = `Final Grade: ${feedback.final_grade}\n\nFeedback:\n`;
+    Object.keys(feedback.grades).forEach(criteria => {
+        feedbackContent += `\n${criteria}:\n${feedback.grades[criteria].feedback}\nScore: ${feedback.grades[criteria].score}\n`;
+    });
+
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) {
+        console.error('jsPDF library is not loaded');
+        return;
+    }
+    const doc = new jsPDF();
+    doc.text(feedbackContent, 10, 10);
+    doc.save('resume_feedback.pdf');
 }
