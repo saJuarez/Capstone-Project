@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect
 import os
-import spacy
-import requests
 import pdfplumber
 import docx
 import requests
@@ -229,12 +227,10 @@ def upload_file():
     # Grade the parsed resume text using OpenAI API
     grading_result = grade_resume(resume_text)
 
-    # Assuming you have the user_id available from the frontend
-    user_id = request.form.get('user_id')  # Ensure this is sent from the frontend
+    # Debugging log to verify the grading result
+    print(f"Grading result: {grading_result}")
 
-    # Save feedback to the database
-    save_feedback_to_db(user_id, resume_text, grading_result)
-
+    # Remove the uploaded file after analysis
     os.remove(file_path)
 
     # Save feedback to the database
@@ -285,20 +281,19 @@ def signup():
         else:
             return jsonify({'message': 'Error: User could not be created.'}), 500
     except Exception as e:
-        print(f"Error creating user: {e}")
-        return jsonify({'message': 'Signup failed.'}), 500
+        print(f"Error in signup route: {e}")
+        return jsonify({'message': f"Error: {str(e)}"}), 500
 
 # Login route to authenticate a user
 @app.route('/login', methods=['POST'])
 def login():
-    email = request.form.get('email').lower()
+    email = request.form.get('email')
     password = request.form.get('password')
 
     connection = connect_to_db()
-    try:
-        cursor = connection.cursor()
-        cursor.execute('SELECT id, password FROM users WHERE email = %s', (email,))
-        user = cursor.fetchone()
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+    user = cursor.fetchone()
 
     if user:
         stored_password = user[3]
@@ -403,54 +398,8 @@ def job_search():
         else:
             return jsonify({'error': 'No resume found for user'}), 404
     except Exception as e:
-        print(f"Error logging in: {e}")
-        return jsonify({'message': 'Login failed.'}), 500
-    
-    # Enhanced job search route
-@app.route('/job-search', methods=['GET'])
-def job_search():
-    user_id = request.args.get('user_id')
-    location = request.args.get('location', 'USA')  
-    job_title = request.args.get('job_title', None)  
-    
-    connection = connect_to_db()
-    try:
-        cursor = connection.cursor()
-        cursor.execute('SELECT resume_text FROM resume_feedback WHERE user_id = %s ORDER BY upload_date DESC LIMIT 1;', (user_id,))
-        result = cursor.fetchone()
-        cursor.close()
-        connection.close()
-
-        if result:
-            resume_text = result[0]
-            
-            # Extract relevant keywords (e.g., skills) from the resume
-            keywords = extract_skills_from_resume(resume_text)
-            
-            # Call Adzuna API with extracted keywords and location
-            api_url = f"https://api.adzuna.com/v1/api/jobs/us/search/1"
-            params = {
-                'app_id': os.getenv('ADZUNA_APP_ID'),  
-                'app_key': os.getenv('ADZUNA_APP_KEY'),
-                'what': job_title or ','.join(keywords),  # Search by job title or extracted skills
-                'where': location,  # default to 'USA'
-                'results_per_page': 10
-            }
-            response = requests.get(api_url, params=params)
-            
-            if response.status_code == 200:
-                job_results = response.json()
-                return jsonify({'jobs': job_results})
-            else:
-                return jsonify({'error': 'Failed to fetch job listings'}), 500
-        else:
-            return jsonify({'error': 'No resume found for user'}), 404
-    except Exception as e:
         print(f"Error during job search: {e}")
         return jsonify({'error': 'Failed to search for jobs'}), 500
-
-
-
 
 # Define skill-related keywords and patterns to detect skills contextually
 SKILL_PATTERNS = ['proficient in', 'experience with', 'familiar with', 'worked on', 'skills in', 'expertise in']
@@ -459,7 +408,6 @@ SKILL_PATTERNS = ['proficient in', 'experience with', 'familiar with', 'worked o
 def extract_skills_from_resume(resume_text):
     doc = nlp(resume_text)
     
-
     extracted_skills = set()
 
     for sent in doc.sents:  # Iterate over sentences
@@ -470,26 +418,16 @@ def extract_skills_from_resume(resume_text):
                     if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 1:
                         extracted_skills.add(token.text)
 
-
     for token in doc:
         if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 1:
             extracted_skills.add(token.text)
 
-   
     for chunk in doc.noun_chunks:
         extracted_skills.add(chunk.text)
 
     # Return the final set of skills found
     return list(extracted_skills)
 
-# Example Usage
-resume_text = """
-    I am proficient in Python, Java, and Machine Learning. I have extensive experience with Docker, Kubernetes, 
-    and building React applications. I am also familiar with Azure and AWS cloud services, and have worked on 
-    projects involving data science using TensorFlow and Pandas.
-"""
-skills = extract_skills_from_resume(resume_text)
-print(f"Extracted skills: {skills}")
 # Root route to render the index page
 @app.route('/')
 def index():
