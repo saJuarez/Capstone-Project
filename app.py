@@ -364,7 +364,8 @@ def jobs():
 def job_search():
     user_id = request.args.get('user_id')
     location = request.args.get('location', 'USA')  
-    job_title = request.args.get('job_title', None)  
+    job_title = request.args.get('job_title', "")  
+    salary_min = request.args.get('salary_min', 0)  
     
     connection = connect_to_db()
     try:
@@ -384,7 +385,8 @@ def job_search():
             params = {
                 'app_id': os.getenv('ADZUNA_APP_ID'),  
                 'app_key': os.getenv('ADZUNA_APP_KEY'),
-                'what': job_title or ','.join(keywords),  # Search by job title or extracted skills
+                'title_only': job_title,  # Search by job title or extracted skills
+                'salary_min': salary_min,
                 'where': location,  # default to 'USA'
                 'results_per_page': 10
             }

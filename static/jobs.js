@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const jobResultsContainer = document.getElementById('job-results-container');
     
     // Get user ID from local storage
-    const userId = localStorage.getItem('user_id');
+    const userId = 1;
 
     if (!userId) {
         alert('You must be logged in to view job matches.');
@@ -10,8 +10,28 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    const queryParams = new URLSearchParams(window.location.search);
+    let job_title;
+    if (queryParams.has("job_title")) {
+        job_title = "&job_title=" + queryParams.get("job_title");
+    } else {
+        job_title = "";
+    }
+    let location;
+    if (queryParams.has("location")) {
+        location = "&location=" + queryParams.get("location");
+    } else {
+        location = "";
+    }
+    let salary_min;
+    if (queryParams.has("salary_min") && queryParams.get("salary_min") != "") {
+        salary_min = "&salary_min=" + queryParams.get("salary_min");
+    } else {
+        salary_min = "";
+    }
+
     // Fetch job matches from the server
-    fetch(`/job-search?user_id=${userId}`)
+    fetch(`/job-search?user_id=${userId}${job_title}${location}${salary_min}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Failed to fetch job matches');
