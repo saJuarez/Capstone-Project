@@ -187,6 +187,24 @@ def grade_resume(resume_text):
 
     return {"grades": grades, "total_score": total_score, "percentage": percentage, "final_grade": final_grade}
 
+def extract_skills_with_gpt(resume_text):
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are an assistant skilled at analyzing resumes."},
+            {"role": "user", "content": f"Extract a list of skills, programming languages, and relevant experiences from this resume. Include specific technologies, software, and any mentioned experience levels:\n\n{resume_text}"}
+        ],
+        max_tokens=150,
+        temperature=0.7
+    )
+    
+    # Parse and return the response as a list of skills
+    skills_text = response.choices[0].message.content.strip()
+    skills_list = [skill.strip() for skill in skills_text.split(',')]
+    
+    print("Extracted Skills with GPT:", skills_list)  # For verification
+    return skills_list
+
 # Stricter score assignment
 def analyze_feedback_and_assign_strict_score(feedback):
     import random
@@ -359,13 +377,11 @@ def jobs():
         return redirect('/')  # Redirect to homepage if not logged in
     return render_template('jobs.html') 
 
-# Job search route
 @app.route('/job-search', methods=['GET'])
 def job_search():
     user_id = request.args.get('user_id')
     location = request.args.get('location', 'USA')  
-    job_title = request.args.get('job_title', "")  
-    salary_min = request.args.get('salary_min', 0)  
+    job_title = request.args.get('job_title', 'software engineer')
     
     connection = connect_to_db()
     try:
@@ -377,17 +393,21 @@ def job_search():
 
         if result:
             resume_text = result[0]
-            # Extract relevant keywords (e.g., skills) from the resume
-            keywords = extract_skills_from_resume(resume_text)
             
-            # Call Adzuna API with extracted keywords and location
-            api_url = f"https://api.adzuna.com/v1/api/jobs/us/search/1"
+            # Use GPT-3.5 to extract skills instead of rule-based extraction
+            skills = extract_skills_with_gpt(resume_text)
+            print("Skills extracted with GPT-3.5:", skills)  # For debugging
+            
+            # Use skills in job search query
+            search_query = job_title if not skills else ','.join(skills)
+            
+            # Call Adzuna API with skills and location
+            api_url = "https://api.adzuna.com/v1/api/jobs/us/search/1"
             params = {
-                'app_id': os.getenv('ADZUNA_APP_ID'),  
+                'app_id': os.getenv('ADZUNA_APP_ID'),
                 'app_key': os.getenv('ADZUNA_APP_KEY'),
-                'title_only': job_title,  # Search by job title or extracted skills
-                'salary_min': salary_min,
-                'where': location,  # default to 'USA'
+                'what': search_query,
+                'where': location,
                 'results_per_page': 10
             }
             response = requests.get(api_url, params=params)
@@ -402,6 +422,8 @@ def job_search():
     except Exception as e:
         print(f"Error during job search: {e}")
         return jsonify({'error': 'Failed to search for jobs'}), 500
+
+
 
 # Define skill-related keywords and patterns to detect skills contextually
 SKILL_PATTERNS = ['proficient in', 'experience with', 'familiar with', 'worked on', 'skills in', 'expertise in']
@@ -429,6 +451,7 @@ def extract_skills_from_resume(resume_text):
 
     # Return the final set of skills found
     return list(extracted_skills)
+
 
 # Root route to render the index page
 @app.route('/')
