@@ -191,19 +191,21 @@ def extract_skills_with_gpt(resume_text):
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "You are an assistant skilled at analyzing resumes."},
-            {"role": "user", "content": f"Extract a list of skills, programming languages, and relevant experiences from this resume. Include specific technologies, software, and any mentioned experience levels:\n\n{resume_text}"}
+            {"role": "system", "content": "Extract only the list of core skills and programming languages from this resume, without additional descriptions or details."},
+            {"role": "user", "content": f"Extract skills and programming languages from this resume:\n\n{resume_text}"}
         ],
         max_tokens=150,
         temperature=0.7
     )
-    
-    # Parse and return the response as a list of skills
+
     skills_text = response.choices[0].message.content.strip()
-    skills_list = [skill.strip() for skill in skills_text.split(',')]
-    
-    print("Extracted Skills with GPT:", skills_list)  # For verification
-    return skills_list
+    skills_list = [skill.strip() for skill in skills_text.split('\n') if skill.strip()]
+
+    # Filter and return only keywords that are directly skills or programming languages
+    core_skills = [skill for skill in skills_list if skill]  # Adjust to select core terms only
+    print("Extracted Core Skills with GPT:", core_skills)
+    return core_skills
+
 
 # Stricter score assignment
 def analyze_feedback_and_assign_strict_score(feedback):
@@ -380,9 +382,10 @@ def jobs():
 @app.route('/job-search', methods=['GET'])
 def job_search():
     user_id = request.args.get('user_id')
-    location = request.args.get('location', 'USA')  
+    location = request.args.get('location', 'California')  # Test with a specific location
     job_title = request.args.get('job_title', 'software engineer')
-    
+
+    # Fetch the most recent resume text
     connection = connect_to_db()
     try:
         cursor = connection.cursor()
@@ -393,15 +396,10 @@ def job_search():
 
         if result:
             resume_text = result[0]
-            
-            # Use GPT-3.5 to extract skills instead of rule-based extraction
-            skills = extract_skills_with_gpt(resume_text)
-            print("Skills extracted with GPT-3.5:", skills)  # For debugging
-            
-            # Use skills in job search query
-            search_query = job_title if not skills else ','.join(skills)
-            
-            # Call Adzuna API with skills and location
+            skills = extract_skills_with_gpt(resume_text)  # Extract skills from resume
+            search_query = job_title if not skills else ','.join(skills[:5])  
+
+            # Adzuna API call
             api_url = "https://api.adzuna.com/v1/api/jobs/us/search/1"
             params = {
                 'app_id': os.getenv('ADZUNA_APP_ID'),
@@ -411,7 +409,10 @@ def job_search():
                 'results_per_page': 10
             }
             response = requests.get(api_url, params=params)
-            
+
+            print(response.url)  # Debugging: Show full request URL
+            print(response.json())  # Debugging: Show raw JSON response
+
             if response.status_code == 200:
                 job_results = response.json()
                 return jsonify({'jobs': job_results})
@@ -422,6 +423,7 @@ def job_search():
     except Exception as e:
         print(f"Error during job search: {e}")
         return jsonify({'error': 'Failed to search for jobs'}), 500
+
 
 
 
