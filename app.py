@@ -297,18 +297,29 @@ def login():
 
     if user:
         stored_password = user[3]
-        
+
         if check_password_hash(stored_password, password):  
             session['user_id'] = user[0]  # Store user ID in session
-            session['logged_in'] = True 
-            print("User logged in:", session['user_id']) 
-            return jsonify({'message': 'Login successful!'}), 200
+            session['logged_in'] = True
+
+            return jsonify({'success': True, 'message': 'Login successful!', 'user_id': user[0]}), 200
         else:
             print("Password verification failed.")
-            return jsonify({'message': 'Invalid credentials.'}), 401
+            return jsonify({'success': False, 'message': 'Invalid credentials.'}), 401
     else:
         print("User not found for email:", email)
-        return jsonify({'message': 'User not found.'}), 404
+        return jsonify({'success': False, 'message': 'User not found.'}), 404
+    
+    
+@app.route('/api/check-login-status')
+def check_login_status():
+    return jsonify({"logged_in": session.get('logged_in', False)})
+
+# Clear session upon logout
+@app.route('/logout')
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out successfully'}), 200
 
 @app.route('/feedback-history')
 def feedback_history():
@@ -342,16 +353,6 @@ def get_feedback_history_data():
     user_id = session.get('user_id')
     feedbacks = get_feedback_history(user_id)
     return jsonify({'feedbacks': feedbacks})
-
-@app.route('/api/check-login-status')
-def check_login_status():
-    return jsonify({"logged_in": session.get('logged_in', False)})
-
-# Clear session upon logout
-@app.route('/logout')
-def logout():
-    session.clear()
-    return jsonify({'message': 'Logged out successfully'}), 200
 
 @app.route('/jobs')
 def jobs():

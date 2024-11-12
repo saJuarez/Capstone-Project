@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const jobResultsContainer = document.getElementById('job-results-container');
     
-    // Get user ID from local storage
-    const userId = localStorage.getItem('user_id');
+    // Get user ID 
+    const userId = sessionStorage.getItem('user_id');
 
     if (!userId) {
         alert('You must be logged in to view job matches.');
@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('An error occurred while fetching job matches.');
         });
 
-    // Back button functionality
+    // Back to homepage (Temporary)
     document.getElementById('back-button').addEventListener('click', function () {
-        window.location.href = '/'; // Redirect back to the main dashboard
+        window.location.href = '/'; 
     });
 });

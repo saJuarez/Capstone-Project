@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return response.json();
     }
 
-
     function handleError(error, message = 'An error occurred.') {
         console.error(error);
         alert(message);
@@ -56,9 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /**
-     * Sidebar toggle handling.
-     */
+    // Sidebar toggle handling
     const sidebarIcon = document.getElementById('sidebar-icon');
     const sideMenu = document.getElementById('side-menu');
     const closeMenu = document.getElementById('close-menu');
@@ -90,35 +87,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Feedback History click event handling
-    const feedbackHistoryLink = document.getElementById('feedback-history-link');
-    if (feedbackHistoryLink) {
-        feedbackHistoryLink.addEventListener('click', function (event) {
-            event.preventDefault();
-            fetch('/feedback-history')
-                .then(response => {
-                    if (response.status === 403) {
-                        return response.json().then(data => {
-                            showError(data.error || 'You must be logged in first to view feedback history.');
-                        });
-                    } else if (response.ok) {
-                        // If logged in, redirect to feedback history page
-                        window.location.href = '/feedback-history';
-                    } else {
-                        handleError(new Error('Unexpected response'), 'Error checking login status.');
-                    }
-                })
-                .catch(error => handleError(error, 'Error checking login status.'));
-        });
-    }
-
-    window.addEventListener('click', function (event) {
-        closeIfClickedOutside(event.target, sideMenu, sidebarIcon);
-    });
-
-    // Open settings modal
+    // Settings Modal
     const settingsLink = document.getElementById('settings-link');
     const settingsModal = document.getElementById('settings-modal');
+
     if (settingsLink) {
         settingsLink.addEventListener('click', function (event) {
             event.preventDefault();
@@ -137,7 +109,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => handleError(error, 'Error checking login status.'));
         });
     }
-
 
     window.addEventListener('click', function (event) {
         if (settingsModal && event.target === settingsModal) {
@@ -207,68 +178,119 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /**
-     * Show login modal when logout button is clicked.
-     */
-    const logoutButton = document.getElementById('logout-button');
-    const loginModal = document.getElementById('login-modal');
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            fetch('/logout')
-                .then(handleFetchResponse)
-                .then(data => {
-                    alert(data.message);
-                    sideMenu.classList.remove('open');
-                    openModal(loginModal);
-                })
-                .catch(error => handleError(error, 'Error logging out.'));
-        });
-    }
-
-    const closeButtons = document.querySelectorAll('.close-modal');
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const modal = button.closest('.modal');
-            closeModal(modal);
-        });
-    });
-
-    /**
-     * Show Sign Up Modal when sign Up button is clicked.
-     */
+    // Show sign-up modal on click
     const signUpButton = document.getElementById('sign-up-button');
     const signUpModal = document.getElementById('sign-up-modal');
+
     if (signUpButton && signUpModal) {
         signUpButton.addEventListener('click', function (event) {
             event.preventDefault();
-            closeModal(loginModal);
+            closeModal(document.getElementById('login-modal'));
             openModal(signUpModal);
         });
     }
 
-    window.addEventListener('click', function (event) {
-        const modals = [loginModal, document.getElementById('grade-modal')];
-        modals.forEach(modal => {
-            if (modal && event.target === modal) {
-                closeModal(modal);
+    // Fetch login status from backend to sync with session storage in frontend
+    fetch('/api/check-login-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.logged_in) {
+                sessionStorage.setItem('loggedIn', 'true');
+                closeModal(document.getElementById('login-modal')); // Close login modal if user is
+            }                                                       // logged in
+        })
+        .catch(error => console.error('Error checking login status:', error));
+
+    // Check if user is logged in. If not, show login modal
+    const loginStatus = sessionStorage.getItem('loggedIn');
+    const loginModal = document.getElementById('login-modal');
+
+    if (loginStatus === 'true' && loginModal) {
+        closeModal(loginModal);
+    } else if (!loginStatus && loginModal) {
+        openModal(loginModal);
+    }
+
+    // Handle form submission for login
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(loginForm);
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();  // Wait for the response to be converted to JSON
+
+                // Check if login was successful
+                if (data.success) {
+                    sessionStorage.setItem('loggedIn', 'true');
+                    sessionStorage.setItem('user_id', data.user_id);  
+                    closeModal(document.getElementById('login-modal'));
+                    alert('Login successful!');
+                } else {
+                    alert(data.message || 'Login failed. Please check your credentials.');
+                }
+
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('An error occurred during login.');
             }
         });
-    });
+    }
 
-    /**
-     * Form submission handling.
-     */
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) handleFormSubmit(loginForm, '/login', 'Login successful!');
+    // Handle logout
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            fetch('/logout')
+                .then(response => response.json())
+                .then(data => {
+                    sessionStorage.removeItem('loggedIn');  // Remove session status on logout
+                    alert('You have been logged out.');
+
+                    openModal(document.getElementById('login-modal'));
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('An error occurred during logout.');
+                });
+        });
+    }
 
     const signUpForm = document.getElementById('sign-up-form');
     if (signUpForm) handleFormSubmit(signUpForm, '/signup', 'Signup successful!');
 
-    /**
-     * Resume form submit handling.
-     */
+    // Feedback History click event handling
+    const feedbackHistoryLink = document.getElementById('feedback-history-link');
+    if (feedbackHistoryLink) {
+        feedbackHistoryLink.addEventListener('click', function (event) {
+            event.preventDefault(); // Prevent the default navigation behavior
+
+            fetch('/api/check-login-status') // Check login status
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        // If logged in, redirect to feedback history page
+                        window.location.href = '/feedback-history';
+                    } else {
+                        // If not logged in, show an alert
+                        alert('You must be logged in to view your resume feedback history.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking login status:', error);
+                    alert('An error occurred while checking login status.');
+                });
+        });
+    }
+    // Resume form submit handling
     const resumeForm = document.getElementById('resume-form');
     if (resumeForm) {
         resumeForm.addEventListener('submit', function (event) {
@@ -334,61 +356,4 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
-
-    /**
-     * Chat Box handling.
-     */
-    const sendChatButton = document.getElementById('send-chat');
-    if (sendChatButton) {
-        sendChatButton.addEventListener('click', function () {
-            const input = document.getElementById('chat-input').value;
-            const chatLog = document.getElementById('chat-log');
-
-            if (!input.trim()) return;
-
-            chatLog.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
-
-            fetch('/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: input })
-            })
-                .then(handleFetchResponse)
-                .then(data => {
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    chatLog.innerHTML += `<div><strong>AI:</strong> ${data.reply}</div>`;
-                    document.getElementById('chat-input').value = '';
-                })
-                .catch(error => {
-                    handleError(error, 'Error sending message.');
-                    chatLog.innerHTML += `<div style="color:red;">Error sending message: ${error.message}</div>`;
-                });
-        });
-    }
-
-    /**
-     * Job Search Handling.
-     */
-    const jobsLink = document.getElementById('jobs-link');
-    if (jobsLink) {
-        jobsLink.addEventListener('click', function (event) {
-            event.preventDefault();
-            fetch('/api/check-login-status')  // Check login status
-                .then(handleFetchResponse)
-                .then(data => {
-                    if (data.logged_in) {
-                        window.location.href = '/jobs';  // Redirect to jobs page
-                    } else {
-                        alert('You must be logged in to view job matches.');
-                        window.location.href = '/';  // Redirect to index if not logged in
-                    }
-                })
-                .catch(error => handleError(error, 'Error checking login status.'));
-        });
-    }
-    
 });
