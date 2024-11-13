@@ -61,15 +61,23 @@
                             <button type="button" id="change-password-button" class="button tertiary-bg small">Change
                                 Password</button>
 
-                            <div id="password-fields" style="display: none; margin-top: 20px;">
-                                <label for="old-password">Old Password:</label>
-                                <input type="password" id="old-password" name="old-password" required>
-                                <label for="new-password">New Password:</label>
-                                <input type="password" id="new-password" name="new-password" required>
-                                <label for="confirm-password">Confirm New Password:</label>
-                                <input type="password" id="confirm-password" name="confirm-password" required>
-                                <button type="submit" class="button primary-bg small">Save New Password</button>
-                            </div>
+                                <div id="password-fields" style="display: none; margin-top: 20px;">
+                                    <form id="change-password-form">
+                                        <input type="hidden" id="user_id" name="user_id" value="{{ session['user_id'] }}">
+                                        
+                                        <label for="old-password">Old Password:</label>
+                                        <input type="password" id="old-password" name="old-password" required>
+                                        
+                                        <label for="new-password">New Password:</label>
+                                        <input type="password" id="new-password" name="new-password" required>
+                                        
+                                        <label for="confirm-password">Confirm New Password:</label>
+                                        <input type="password" id="confirm-password" name="confirm-password" required>
+                                        
+                                        <button type="submit" class="button primary-bg small">Save New Password</button>
+                                    </form>
+                                </div>
+                                
                         </div>
                     </div>
 

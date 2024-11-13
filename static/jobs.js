@@ -1,5 +1,28 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const jobResultsContainer = document.getElementById('job-results-container');
+    /**
+     * Sidebar functionality
+     */
+    const sidebarIcon = document.getElementById('sidebar-icon');
+    const sideMenu = document.getElementById('side-menu');
+    const closeMenu = document.getElementById('close-menu');
+
+    if (sidebarIcon) {
+        sidebarIcon.addEventListener('click', function () {
+            sideMenu.classList.toggle('open');
+        });
+    }
+
+    if (closeMenu) {
+        closeMenu.addEventListener('click', function () {
+            sideMenu.classList.remove('open');
+        });
+    }
+
+    window.addEventListener('click', function (event) {
+        if (!sideMenu.contains(event.target) && !sidebarIcon.contains(event.target)) {
+            sideMenu.classList.remove('open');
+        }
+    });    const jobResultsContainer = document.getElementById('job-results-container');
     
     // Get user ID 
     const userId = sessionStorage.getItem('user_id');

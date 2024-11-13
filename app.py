@@ -260,6 +260,53 @@ def save_feedback_to_db(user_id, resume_text, feedback):
         print(f"Error saving feedback: {e}")
         return None
 
+@app.route('/update-password', methods=['POST'])
+def update_password():
+    user_id = request.form.get('user_id')
+    old_password = request.form.get('old_password')
+    new_password = request.form.get('new_password')
+
+    print("Received user_id:", user_id)
+    print("Received old_password:", old_password)
+    print("Received new_password:", new_password)
+
+    if not user_id or not old_password or not new_password:
+        return jsonify(message="Missing required fields"), 400
+
+
+    # Connect to the database
+    conn = connect_to_db()
+    if conn is None:
+        return jsonify(message="Database connection failed"), 500
+
+    cur = conn.cursor()
+
+    # Fetch the current hashed password for the user from the database
+    cur.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+    result = cur.fetchone()
+
+    if not result:
+        return jsonify(message="User not found"), 404
+
+    current_hashed_password = result[0]
+
+    # Verify the old password
+    if not check_password_hash(current_hashed_password, old_password):
+        return jsonify(message="Old password is incorrect"), 403
+
+    # Hash the new password
+    new_hashed_password = generate_password_hash(new_password)
+
+    # Update the password in the database
+    cur.execute("UPDATE users SET password = %s WHERE id = %s", (new_hashed_password, user_id))
+    conn.commit()
+
+    # Close the connection
+    cur.close()
+    conn.close()
+
+    return jsonify(message="Password updated successfully!")
+
 # Signup route to create a new user
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -357,7 +404,7 @@ def get_feedback_history_data():
 @app.route('/jobs')
 def jobs():
     if not session.get('logged_in'):
-        return redirect('/')  # Redirect to homepage if not logged in
+        return redirect('/') 
     return render_template('jobs.html') 
 
 # Job search route
@@ -442,6 +489,6 @@ if __name__ == '__main__':
     # Create tables when the app starts
     create_user_table()
     create_feedback_table()
-    create_jobs_table()  # Create jobs table if it doesn't exist
+    create_jobs_table()  
 
     app.run(debug=True)

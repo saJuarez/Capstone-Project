@@ -94,19 +94,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (settingsLink) {
         settingsLink.addEventListener('click', function (event) {
             event.preventDefault();
-            fetch('/settings') // Fetch login status
-                .then(response => {
-                    if (response.status === 403) {
-                        return response.json().then(data => {
-                            showError(data.error || 'You must be logged in to access settings.');
-                        });
-                    } else if (response.ok) {
-                        openModal(settingsModal);
-                    } else {
-                        handleError(new Error('Unexpected response'), 'Error checking login status.');
-                    }
-                })
-                .catch(error => handleError(error, 'Error checking login status.'));
+
+            // Check sessionStorage instead of fetching '/settings' route if possible
+            if (sessionStorage.getItem('loggedIn') === 'true') {
+                openModal(settingsModal);
+            } else {
+                showError('You must be logged in to access settings.');
+            }
         });
     }
 
@@ -142,41 +136,60 @@ document.addEventListener('DOMContentLoaded', function () {
     // Toggle password fields when the "Change Password" button is clicked
     const changePasswordButton = document.getElementById('change-password-button');
     const passwordFields = document.getElementById('password-fields');
-
-    document.getElementById('password-fields').addEventListener('submit', function (event) {
-        event.preventDefault();
-
-        const userId = document.getElementById('id').value;
-        const oldPassword = document.getElementById('old-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-
-        const data = new FormData();
-        data.append('id', userId);
-        data.append('old-password', oldPassword);
-        data.append('new-password', newPassword);
-        data.append('confirm-password', confirmPassword);
-
-        fetch('/update-password', {
-            method: 'POST',
-            body: data
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    });
+    const changePasswordForm = document.getElementById('change-password-form');
 
     if (changePasswordButton) {
         changePasswordButton.addEventListener('click', function () {
+            // Toggle the visibility of the password form
             passwordFields.style.display = passwordFields.style.display === 'none' ? 'block' : 'none';
         });
     }
+
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('user_id').value;
+            const oldPassword = document.getElementById('old_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            console.log("User ID:", userId);
+            console.log("Old Password:", oldPassword);
+            console.log("New Password:", newPassword);
+
+            if (newPassword !== confirmPassword) {
+                alert('New password and confirm password do not match.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('old_password', oldPassword);
+            formData.append('new_password', newPassword);
+
+            fetch('/update-password', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(errorText => { throw new Error(errorText); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred: ' + error.message);
+                });
+        });
+    }
+
 
     // Show sign-up modal on click
     const signUpButton = document.getElementById('sign-up-button');
@@ -228,14 +241,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await response.json();  // Wait for the response to be converted to JSON
 
                 // Check if login was successful
+                // Store logged-in status and user ID in sessionStorage after login
                 if (data.success) {
                     sessionStorage.setItem('loggedIn', 'true');
-                    sessionStorage.setItem('user_id', data.user_id);  
+                    sessionStorage.setItem('user_id', data.user_id);
                     closeModal(document.getElementById('login-modal'));
                     alert('Login successful!');
                 } else {
                     alert(data.message || 'Login failed. Please check your credentials.');
                 }
+
 
             } catch (error) {
                 console.error('Login error:', error);

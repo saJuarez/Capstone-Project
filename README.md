@@ -2,6 +2,8 @@
 
 ## Changelog
 
+### [11.15.01 Library Poster ]
+- Fixed issue where settings modal wouldn't open.
 ### [10.27.01 Propress Report]
 - Fixed session issues. Users can now sign up new accounts and log in, allowing accesss to feedback page and settings menu
 - Started integrating the jobs matching API and web page. Currently still in development; still need to finish proper       routing
