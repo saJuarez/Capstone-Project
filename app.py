@@ -382,8 +382,8 @@ def jobs():
 @app.route('/job-search', methods=['GET'])
 def job_search():
     user_id = request.args.get('user_id')
-    location = request.args.get('location', 'California')  # Test with a specific location
-    job_title = request.args.get('job_title', 'software engineer')
+    location = request.args.get('location', 'USA','California')  # Test with a specific location
+    job_title = request.args.get('job_title', '')
 
     # Fetch the most recent resume text
     connection = connect_to_db()
