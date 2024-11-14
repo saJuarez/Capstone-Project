@@ -2,6 +2,8 @@
 
 ## Changelog
 
+### [11.15.02 Library Poster ]
+- Should be ready for Demo on Friday but some details features need to be debug before final day
 ### [11.15.01 Library Poster ]
 - Fixed issue where settings modal wouldn't open.
 ### [10.27.01 Propress Report]
