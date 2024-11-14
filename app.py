@@ -4,6 +4,7 @@ import pdfplumber
 import docx
 import requests
 from openai import OpenAI
+import hashlib
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import extras
@@ -224,8 +225,12 @@ def assign_letter_grade(percentage):
         return "D"
     else:
         return "F"
+    
 
-# Route to handle file upload and resume grading
+def hash_resume_text(resume_text):
+    """Generate a SHA-256 hash for the resume text."""
+    return hashlib.sha256(resume_text.encode()).hexdigest()
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'resume' not in request.files:
@@ -235,33 +240,46 @@ def upload_file():
     if not (file.filename.endswith('.pdf') or file.filename.endswith('.doc') or file.filename.endswith('.docx')):
         return jsonify({'error': 'Unsupported file format'}), 400
 
+    # Ensure the uploads folder exists
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
     file.save(file_path)
 
     # Parse the resume depending on the file type
-    if file.filename.endswith('.pdf'):
-        resume_text = parse_pdf(file_path)
-    elif file.filename.endswith('.doc') or file.filename.endswith('.docx'):
-        resume_text = parse_docx(file_path)
+    resume_text = parse_pdf(file_path) if file.filename.endswith('.pdf') else parse_docx(file_path)
+    os.remove(file_path)  # Clean up the uploaded file
 
-    # Grade the parsed resume text using OpenAI API
+    # Generate the hash of the resume text
+    resume_hash = hash_resume_text(resume_text)
+
+    # Check if the resume hash exists in the database
+    existing_feedback = check_existing_feedback(resume_hash)
+    if existing_feedback:
+        # Return existing grading result if found
+        return jsonify({'grading_result': existing_feedback})
+
+    # Grade the resume and save the feedback in the database
     grading_result = grade_resume(resume_text)
-
-    # Debugging log to verify the grading result
-    print(f"Grading result: {grading_result}")
-
-    # Remove the uploaded file after analysis
-    os.remove(file_path)
-
-    # Save feedback to the database
     user_id = session.get('user_id')
     if user_id:
-        save_feedback_to_db(user_id, resume_text, grading_result)
+        save_feedback_to_db(user_id, resume_text, grading_result, resume_hash)
 
-    # Return analysis and grade as JSON
     return jsonify({'grading_result': grading_result})
 
-def save_feedback_to_db(user_id, resume_text, feedback):
+def check_existing_feedback(resume_hash):
+    """Check if feedback already exists for a given resume hash."""
+    connection = connect_to_db()
+    cursor = connection.cursor()
+    cursor.execute("SELECT feedback FROM resume_feedback WHERE resume_hash = %s", (resume_hash,))
+    result = cursor.fetchone()
+    cursor.close()
+    connection.close()
+    return result[0] if result else None
+
+def save_feedback_to_db(user_id, resume_text, feedback, resume_hash):
+    """Save the feedback and resume hash to the database."""
     connection = connect_to_db()
     if connection is None:
         print("Database connection failed.")
@@ -269,16 +287,16 @@ def save_feedback_to_db(user_id, resume_text, feedback):
     try:
         cursor = connection.cursor()
         cursor.execute('''
-            INSERT INTO resume_feedback (user_id, resume_text, feedback)
-            VALUES (%s, %s, %s);
-        ''', (user_id, resume_text, psycopg2.extras.Json(feedback)))
+            INSERT INTO resume_feedback (user_id, resume_text, feedback, resume_hash)
+            VALUES (%s, %s, %s, %s);
+        ''', (user_id, resume_text, psycopg2.extras.Json(feedback), resume_hash))
         connection.commit()
         cursor.close()
         connection.close()
-        print("Feedback saved to the database.")
+        print("Feedback and hash saved to the database.")
     except Exception as e:
         print(f"Error saving feedback: {e}")
-        return None
+
 
 @app.route('/update-password', methods=['POST'])
 def update_password():
