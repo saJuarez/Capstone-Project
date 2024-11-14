@@ -11,115 +11,118 @@
     <header>
         <h1>Job Search Results</h1>
     </header>
-    <body>
-        <!-- Side Menu -->
-        <div id="sidebar-icon" class="icon">
-            <img src="../static/images/icons/sidebar-icon.svg" alt="Menu icon" width="40" height="40">
-        </div>
-    
-        <nav id="side-menu">
-            <button id="close-menu" aria-label="Close side menu">&times;</button>
-            <ul>
-                <li>
-                    <a href="{{ url_for('index') }}">
-                        <img src="../static/images/icons/home-icon.svg" alt="Home icon" width="24" height="24">
-                        Home
-                    </a>
-                </li>
-                <li>
-                    <a href="#">
-                        <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
-                        Jobs
-                    </a>
-                </li>
-                <li>
-                    <a href="#" id="settings-link">
-                        <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
-                        Settings
-                    </a>
-                </li>
-            </ul>
-            <a href="#" id="logout-button">
-                <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
-                Logout
-            </a>
-        </nav>
-    
-        <!-- Settings Modal -->
-        <div id="settings-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <button class="close-modal">&times;</button>
-                <h2>Settings</h2>
-                <div id="settings-container">
-                    <div id="tabs">
-                        <button class="tab-link active" data-tab="account">Account</button>
-                        <button class="tab-link" data-tab="general">General</button>
-                    </div>
-    
-                    <div id="general" class="tab-content">
-                        <h3>General Settings</h3>
-                        <p>Customize general settings here.</p>
-                    </div>
-                    
-                    <div id="tab-contents">
-                        <!-- Account settings-->
-                        <div id="account" class="tab-content active">
-                            <!-- Change password -->
-                            <div id="change-password-section" class="mb-20">
-                                <label for="password">Password:</label>
-                                <button type="button" id="change-password-button" class="button tertiary-bg small">Change Password</button>
-    
-                                <div id="password-fields" style="display: none; margin-top: 20px;">
-                                    <label for="old-password">Old Password:</label>
-                                    <input type="password" id="old-password" name="old-password" required>
-    
-                                    <label for="new-password">New Password:</label>
-                                    <input type="password" id="new-password" name="new-password" required>
-    
-                                    <label for="confirm-password">Confirm New Password:</label>
-                                    <input type="password" id="confirm-password" name="confirm-password" required>
-    
-                                    <button type="submit" class="button primary-bg small">Save New Password</button>
-                                </div>
+
+    <!-- Side Menu -->
+    <div id="sidebar-icon" class="icon">
+        <img src="../static/images/icons/sidebar-icon.svg" alt="Menu icon" width="40" height="40">
+    </div>
+
+    <nav id="side-menu">
+        <button id="close-menu" aria-label="Close side menu">&times;</button>
+        <ul>
+            <li>
+                <a href="{{ url_for('index') }}">
+                    <img src="../static/images/icons/home-icon.svg" alt="Home icon" width="24" height="24">
+                    Home
+                </a>
+            </li>
+            
+            <li>
+                <a href="#">
+                    <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
+                    Jobs
+                </a>
+            </li>
+
+            <li>
+                <a href="#" id="settings-link">
+                    <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
+                    Settings
+                </a>
+            </li>
+        </ul>
+        <a href="#" id="logout-button">
+            <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
+            Logout
+        </a>
+    </nav>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Settings</h2>
+            <div id="settings-container">
+                <div id="tabs">
+                    <button class="tab-link active" data-tab="account">Account</button>
+                    <button class="tab-link" data-tab="general">General</button>
+                </div>
+
+                <div id="general" class="tab-content">
+                    <h3>General Settings</h3>
+                    <p>Customize general settings here.</p>
+                </div>
+                
+                <div id="tab-contents">
+                    <!-- Account settings-->
+                    <div id="account" class="tab-content active">
+                        <!-- Change password -->
+                        <div id="change-password-section" class="mb-20">
+                            <label for="password">Password:</label>
+                            <button type="button" id="change-password-button" class="button tertiary-bg small">Change Password</button>
+
+                            <div id="password-fields" style="display: none; margin-top: 20px;">
+                                <label for="old-password">Old Password:</label>
+                                <input type="password" id="old-password" name="old-password" required>
+
+                                <label for="new-password">New Password:</label>
+                                <input type="password" id="new-password" name="new-password" required>
+
+                                <label for="confirm-password">Confirm New Password:</label>
+                                <input type="password" id="confirm-password" name="confirm-password" required>
+
+                                <button type="submit" class="button primary-bg small">Save New Password</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    
-        <!-- Login Modal -->
-        <div id="login-modal" class="modal">
-            <div class="modal-content">
-                <button class="close-modal">&times;</button>
-                <h2>Log In</h2>
-                <form id="login-form" class="modal-form" action="/login" method="POST">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
-                    <button type="submit" id="login-button" class="button tertiary-bg">Log In</button>
-                    <button type="button" id="sign-up-button" class="button primary-bg">Sign Up</button>
-                </form>
-            </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Log In</h2>
+            <form id="login-form" class="modal-form" action="/login" method="POST">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+                <button type="submit" id="login-button" class="button tertiary-bg">Log In</button>
+                <button type="button" id="sign-up-button" class="button primary-bg">Sign Up</button>
+            </form>
         </div>
-    
-        <!-- Sign-Up Modal -->
-        <div id="sign-up-modal" class="modal">
-            <div class="modal-content">
-                <button class="close-modal">&times;</button>
-                <h2>Sign Up</h2>
-                <form id="sign-up-form" class="modal-form" action="/signup" method="POST">
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
-                    <label for="email">Email:</label>
-                    <input type="email" id="sign-up-email" name="email" required>
-                    <label for="password">Password:</label>
-                    <input type="password" id="sign-up-password" name="password" required>
-                    <button type="submit" class="button primary-bg">Sign Up</button>
-                </form>
-            </div>
+    </div>
+
+    <!-- Sign-Up Modal -->
+    <div id="sign-up-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Sign Up</h2>
+            <form id="sign-up-form" class="modal-form" action="/signup" method="POST">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <label for="email">Email:</label>
+                <input type="email" id="sign-up-email" name="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="sign-up-password" name="password" required>
+                <button type="submit" class="button primary-bg">Sign Up</button>
+            </form>
         </div>
+    </div>
+
     <main>
         <div id="job-results-container">
             <!-- Job results will be populated here -->

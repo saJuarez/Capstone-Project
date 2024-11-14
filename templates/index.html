@@ -64,7 +64,7 @@
                                 <div id="password-fields" style="display: none; margin-top: 20px;">
                                     <form id="change-password-form">
                                         <input type="hidden" id="user_id" name="user_id" value="{{ session['user_id'] }}">
-                                        
+                                                                                
                                         <label for="old-password">Old Password:</label>
                                         <input type="password" id="old-password" name="old-password" required>
                                         
@@ -155,7 +155,6 @@
             </div>
         </div>
 
-       
     </main>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

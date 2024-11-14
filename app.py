@@ -226,7 +226,6 @@ def assign_letter_grade(percentage):
     else:
         return "F"
     
-
 def hash_resume_text(resume_text):
     """Generate a SHA-256 hash for the resume text."""
     return hashlib.sha256(resume_text.encode()).hexdigest()
@@ -304,10 +303,6 @@ def update_password():
     old_password = request.form.get('old_password')
     new_password = request.form.get('new_password')
 
-    print("Received user_id:", user_id)
-    print("Received old_password:", old_password)
-    print("Received new_password:", new_password)
-
     if not user_id or not old_password or not new_password:
         return jsonify(message="Missing required fields"), 400
 
@@ -343,7 +338,9 @@ def update_password():
     cur.close()
     conn.close()
 
-    return jsonify(message="Password updated successfully!")
+    session.clear() # Clear a session after changing password
+
+    return jsonify(message="Your password has been changed. Please log in again."), 200
 
 # Signup route to create a new user
 @app.route('/signup', methods=['POST'])
@@ -395,11 +392,14 @@ def login():
         print("User not found for email:", email)
         return jsonify({'success': False, 'message': 'User not found.'}), 404
     
-    
+# Check login status
 @app.route('/api/check-login-status')
 def check_login_status():
-    return jsonify({"logged_in": session.get('logged_in', False)})
-
+    if 'user_id' in session:
+        return jsonify(logged_in=True)
+    else:
+        return jsonify(logged_in=False)
+    
 # Clear session upon logout
 @app.route('/logout')
 def logout():
@@ -476,9 +476,6 @@ def job_search():
             }
             response = requests.get(api_url, params=params)
 
-            print(response.url)  # Debugging: Show full request URL
-            print(response.json())  # Debugging: Show raw JSON response
-
             if response.status_code == 200:
                 job_results = response.json()
                 return jsonify({'jobs': job_results})
@@ -489,9 +486,6 @@ def job_search():
     except Exception as e:
         print(f"Error during job search: {e}")
         return jsonify({'error': 'Failed to search for jobs'}), 500
-
-
-
 
 # Define skill-related keywords and patterns to detect skills contextually
 SKILL_PATTERNS = ['proficient in', 'experience with', 'familiar with', 'worked on', 'skills in', 'expertise in']
@@ -519,7 +513,6 @@ def extract_skills_from_resume(resume_text):
 
     # Return the final set of skills found
     return list(extracted_skills)
-
 
 # Root route to render the index page
 @app.route('/')
