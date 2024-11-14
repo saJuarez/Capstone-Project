@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    /**
-     * Sidebar functionality
-     */
+    // Sidebar functionality
     const sidebarIcon = document.getElementById('sidebar-icon');
     const sideMenu = document.getElementById('side-menu');
     const closeMenu = document.getElementById('close-menu');
@@ -22,18 +20,30 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!sideMenu.contains(event.target) && !sidebarIcon.contains(event.target)) {
             sideMenu.classList.remove('open');
         }
-    });    const jobResultsContainer = document.getElementById('job-results-container');
-    
-    // Get user ID 
-    const userId = sessionStorage.getItem('user_id');
+    });
 
+    const jobResultsContainer = document.getElementById('job-results-container');
+
+    // Show "Finding Jobs..." message with animation
+    let loadingMessage = document.createElement('p');
+    loadingMessage.className = "loading-message"; 
+    loadingMessage.textContent = "Finding Jobs";
+    jobResultsContainer.appendChild(loadingMessage);
+
+    let dotCount = 0;
+    const loadingInterval = setInterval(() => {
+        dotCount = (dotCount + 1) % 4; // Cycle between 0 to 3 dots
+        loadingMessage.textContent = "Finding Jobs" + ".".repeat(dotCount);
+    }, 500);
+
+    // Fetch job matches from the server
+    const userId = sessionStorage.getItem('user_id');
     if (!userId) {
         alert('You must be logged in to view job matches.');
-        window.location.href = '/'; // Redirect to home if not logged in
+        window.location.href = '/';
         return;
     }
 
-    // Fetch job matches from the server
     fetch(`/job-search?user_id=${userId}`)
         .then(response => {
             if (!response.ok) {
@@ -42,9 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return response.json();
         })
         .then(data => {
-            if (data.jobs && data.jobs.results.length > 0) {
-                jobResultsContainer.innerHTML = '';
+            clearInterval(loadingInterval);
+            jobResultsContainer.innerHTML = '';
 
+            if (data.jobs && data.jobs.results.length > 0) {
                 data.jobs.results.forEach(job => {
                     const jobItem = document.createElement('div');
                     jobItem.innerHTML = `
@@ -64,11 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(error => {
             console.error('Error fetching job matches:', error);
-            alert('An error occurred while fetching job matches.');
+            clearInterval(loadingInterval);
+            jobResultsContainer.innerHTML = `<p>An error occurred while fetching job matches.</p>`;
         });
-
-    // Back to homepage (Temporary)
-    document.getElementById('back-button').addEventListener('click', function () {
-        window.location.href = '/'; 
-    });
 });

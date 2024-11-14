@@ -6,17 +6,31 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     function openModal(modal) {
         modal.style.display = 'flex';
+        modal.classList.add('open');
     }
 
     function closeModal(modal) {
         modal.style.display = 'none';
+        modal.classList.remove('open');
     }
 
     function closeIfClickedOutside(target, element, icon) {
-        if (element && element.classList.contains('open') && target !== element && !element.contains(target) && target !== icon && !icon.contains(target)) {
-            element.classList.remove('open');
+        if (element && element.classList.contains('open') && target !== element && !element.contains(target) && target !== icon && (!icon || !icon.contains(target))) {
+            closeModal(element);
         }
     }
+
+    // Close modals if clicked outside
+    window.addEventListener('click', function (event) {
+        closeIfClickedOutside(event.target, settingsModal, settingsLink);
+        closeIfClickedOutside(event.target, loginModal, null);
+
+        if (!sideMenu.contains(event.target) && !sidebarIcon.contains(event.target)) {
+            sideMenu.classList.remove('open');
+        }
+    });
+
+
 
     function handleFetchResponse(response) {
         if (!response.ok) {
@@ -149,14 +163,16 @@ document.addEventListener('DOMContentLoaded', function () {
         changePasswordForm.addEventListener('submit', function (event) {
             event.preventDefault();
 
-            const userId = document.getElementById('user_id').value;
-            const oldPassword = document.getElementById('old_password').value;
-            const newPassword = document.getElementById('new_password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+            const userIdElement = document.getElementById('user_id');
+            if (!userIdElement) {
+                console.error("User ID element is not found.");
+                return;
+            }
 
-            console.log("User ID:", userId);
-            console.log("Old Password:", oldPassword);
-            console.log("New Password:", newPassword);
+            const userId = userIdElement.value;
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
 
             if (newPassword !== confirmPassword) {
                 alert('New password and confirm password do not match.');
@@ -180,7 +196,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(data => {
                     if (data.message) {
-                        alert(data.message);
+                        alert(data.message); // Show alert message to re-login
+                        sessionStorage.removeItem('loggedIn'); // Clear sessionStorage
+                        sessionStorage.removeItem('user_id');
+
+                        // Refresh the page to prompt the user to log in again
+                        window.location.reload();
                     }
                 })
                 .catch(error => {
@@ -189,7 +210,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
-
 
     // Show sign-up modal on click
     const signUpButton = document.getElementById('sign-up-button');
@@ -247,10 +267,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     sessionStorage.setItem('user_id', data.user_id);
                     closeModal(document.getElementById('login-modal'));
                     alert('Login successful!');
+
+                    // Populate the user_id field in the password change form
+                    const userIdField = document.getElementById('user_id');
+                    if (userIdField) {
+                        userIdField.value = data.user_id;
+                    }
                 } else {
                     alert(data.message || 'Login failed. Please check your credentials.');
                 }
-
 
             } catch (error) {
                 console.error('Login error:', error);
@@ -314,7 +339,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(this);
             const resultDiv = document.getElementById('analysis-result');
 
-            resultDiv.innerHTML = `<div class="loading"></div>Analyzing resume...`;
+            // Display loading message with animation
+            const loadingMessage = document.createElement('p');
+            loadingMessage.className = "loading-message"; 
+            loadingMessage.textContent = "Analyzing Resume"; 
+            resultDiv.innerHTML = ''; 
+            resultDiv.appendChild(loadingMessage);
 
             fetch('/upload', {
                 method: 'POST',
@@ -328,8 +358,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         return;
                     }
 
-                    feedbackData = data;
-
+                    // Remove loading message and display results
                     resultDiv.innerHTML = `<h2>Analysis Result:</h2><p>Grading Completed</p>`;
 
                     const gradeResult = `Your final grade is: ${data.grading_result.final_grade} (${data.grading_result.percentage}%)`;

@@ -1,35 +1,52 @@
-/* General Styles */
+/* Job Page-Specific Styles */
+body {
+    display: block;
+    justify-content: normal;
+    align-items: normal;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+}
+
 header {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--primary-color);
+    position: sticky;
+    top: 0;
+    background-color: transparent;
     color: white;
     padding: 20px;
     width: 100%;
     text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
+    z-index: 1000;
 }
 
 header h1 {
-    margin: 0;
     font-size: 2rem;
+    margin: 0;
 }
 
+/* Centered Main Content */
 main {
-    background-color: white;
-    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+/* Job Results Container */
+#job-results-container {
+    background-color: #fff;
+    padding: 20px;
     border-radius: 15px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     max-width: 800px;
     width: 100%;
-    margin-top: 20px;
 }
 
-#job-results-container {
-    color: var(--text-color);
-}
-
+/* Job Entry Styling */
 .job-entry {
     background-color: var(--light-gray);
     border-radius: 10px;
@@ -61,21 +78,13 @@ hr {
     margin: 20px 0;
 }
 
-/* Container Styles */
-#job-results-container {
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    background-color: #fff; /* White background for contrast */
-}
-
-/* Ensure responsiveness */
+/* Responsive Design */
 @media (max-width: 600px) {
     header h1 {
         font-size: 1.5rem;
     }
 
-    #back-button {
-        width: 100%;
+    main {
+        padding: 10px;
     }
 }
