@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Sidebar functionality
+    /**
+     * Sidebar functionality
+     */
     const sidebarIcon = document.getElementById('sidebar-icon');
     const sideMenu = document.getElementById('side-menu');
     const closeMenu = document.getElementById('close-menu');
@@ -8,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sidebarIcon.addEventListener('click', function () {
             sideMenu.classList.toggle('open');
         });
-    }
+    }    
 
     if (closeMenu) {
         closeMenu.addEventListener('click', function () {
@@ -22,11 +24,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Check if the user is logged in; if not, redirect to the homepage
+    fetch('/api/check-login-status')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.logged_in) {
+                window.location.href = '/';
+            }
+        })
+        .catch(error => console.error('Error verifying login status:', error))
+
     const jobResultsContainer = document.getElementById('job-results-container');
 
-    // Show "Finding Jobs..." message with animation
+    // Loading Jobs animation
     let loadingMessage = document.createElement('p');
-    loadingMessage.className = "loading-message"; 
+    loadingMessage.className = "loading-message";
     loadingMessage.textContent = "Finding Jobs";
     jobResultsContainer.appendChild(loadingMessage);
 
