@@ -82,6 +82,9 @@ body {
     font-size: 0.875rem; 
 }
 
+#delete-feedback-button {
+    background-color: var(--quaternary-color);
+}
 /* Sidebar Styles */
 #side-menu {
     height: 100%;

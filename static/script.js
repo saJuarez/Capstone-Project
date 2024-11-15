@@ -30,7 +30,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-
+    const loginModal = document.getElementById('login-modal');
+    const signInButton = document.getElementById('sign-in-button');
+    const logoutButton = document.getElementById('logout-button');
 
     function handleFetchResponse(response) {
         if (!response.ok) {
@@ -211,6 +213,63 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Assuming there's a button with ID 'delete-feedback-button' in the settings modal
+    const deleteFeedbackButton = document.getElementById('delete-feedback-button');
+
+    if (deleteFeedbackButton) {
+        deleteFeedbackButton.addEventListener('click', function () {
+            if (confirm('Are you sure you want to delete all your resume feedback? This action cannot be undone.')) {
+                fetch('/delete-feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            alert(data.message);
+                        } else {
+                            alert(data.error || 'Error occurred while deleting feedback.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while attempting to delete feedback.');
+                    });
+            }
+        });
+    }
+
+    // Ensure the sign-in button opens the login modal
+    if (signInButton) {
+        signInButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (loginModal) {
+                console.log("Sign-in button clicked, opening login modal"); // Debugging line
+                openModal(loginModal);
+            } else {
+                console.error("loginModal is not defined");
+            }
+        });
+    }
+
+    // Function to toggle icons based on session status
+    function toggleIcons() {
+        const isLoggedIn = sessionStorage.getItem('loggedIn') === 'true';
+
+        if (logoutButton) {
+            logoutButton.style.display = isLoggedIn ? 'block' : 'none'; // Show logout if logged in
+        }
+
+        if (signInButton) {
+            signInButton.style.display = isLoggedIn ? 'none' : 'block'; // Show sign-in if not logged in
+        }
+    }
+
+    // Initial call to set icon visibility
+    toggleIcons();
+
     // Show sign-up modal on click
     const signUpButton = document.getElementById('sign-up-button');
     const signUpModal = document.getElementById('sign-up-modal');
@@ -223,20 +282,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Fetch login status from backend to sync with session storage in frontend
+    // Fetch login status from the server to sync session storage
     fetch('/api/check-login-status')
         .then(response => response.json())
         .then(data => {
             if (data.logged_in) {
                 sessionStorage.setItem('loggedIn', 'true');
-                closeModal(document.getElementById('login-modal')); // Close login modal if user is
-            }                                                       // logged in
+            } else {
+                sessionStorage.removeItem('loggedIn');
+            }
+            toggleIcons();
         })
         .catch(error => console.error('Error checking login status:', error));
-
+        
     // Check if user is logged in. If not, show login modal
     const loginStatus = sessionStorage.getItem('loggedIn');
-    const loginModal = document.getElementById('login-modal');
 
     if (loginStatus === 'true' && loginModal) {
         closeModal(loginModal);
@@ -258,21 +318,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: formData
                 });
 
-                const data = await response.json();  // Wait for the response to be converted to JSON
+                const data = await response.json();
 
-                // Check if login was successful
-                // Store logged-in status and user ID in sessionStorage after login
                 if (data.success) {
                     sessionStorage.setItem('loggedIn', 'true');
                     sessionStorage.setItem('user_id', data.user_id);
-                    closeModal(document.getElementById('login-modal'));
+                    closeModal(loginModal);
                     alert('Login successful!');
 
-                    // Populate the user_id field in the password change form
-                    const userIdField = document.getElementById('user_id');
-                    if (userIdField) {
-                        userIdField.value = data.user_id;
-                    }
+                    // Toggle icons after successful login
+                    toggleIcons();
                 } else {
                     alert(data.message || 'Login failed. Please check your credentials.');
                 }
@@ -285,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Handle logout
-    const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', function (event) {
             event.preventDefault();
@@ -306,6 +360,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const signUpForm = document.getElementById('sign-up-form');
     if (signUpForm) handleFormSubmit(signUpForm, '/signup', 'Signup successful!');
+
+    // Jobs click event handling
+    const jobsLink = document.getElementById('jobs-link');
+    if (jobsLink) {
+        jobsLink.addEventListener('click', function (event) {
+            event.preventDefault(); // Prevent the default navigation behavior
+
+            // Check if the user is logged in by checking sessionStorage
+            if (sessionStorage.getItem('loggedIn') === 'true') {
+                // Redirect to jobs page if logged in
+                window.location.href = '/jobs';
+            } else {
+                // Show an alert if not logged in
+                alert('You must be logged in to see recommended jobs.');
+            }
+        });
+    }
 
     // Feedback History click event handling
     const feedbackHistoryLink = document.getElementById('feedback-history-link');
@@ -341,9 +412,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Display loading message with animation
             const loadingMessage = document.createElement('p');
-            loadingMessage.className = "loading-message"; 
-            loadingMessage.textContent = "Analyzing Resume"; 
-            resultDiv.innerHTML = ''; 
+            loadingMessage.className = "loading-message";
+            loadingMessage.textContent = "Analyzing Resume";
+            resultDiv.innerHTML = '';
             resultDiv.appendChild(loadingMessage);
 
             fetch('/upload', {

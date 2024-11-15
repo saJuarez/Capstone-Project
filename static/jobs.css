@@ -88,3 +88,22 @@ hr {
         padding: 10px;
     }
 }
+
+#side-menu {
+    display: none; /* Initially hidden */
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+#side-menu.open {
+    display: block; /* or flex depending on your layout */
+    transform: translateX(0);
+    opacity: 1;
+}
+
+#sidebar-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001; /* Ensure it’s above other elements */
+}

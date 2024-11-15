@@ -439,6 +439,29 @@ def get_feedback_history_data():
     feedbacks = get_feedback_history(user_id)
     return jsonify({'feedbacks': feedbacks})
 
+@app.route('/delete-feedback', methods=['POST'])
+def delete_feedback():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User not logged in.'}), 403
+
+    connection = connect_to_db()
+    if connection is None:
+        return jsonify({'error': 'Database connection failed.'}), 500
+
+    try:
+        cursor = connection.cursor()
+        # Delete all resume feedback associated with the user
+        cursor.execute('DELETE FROM resume_feedback WHERE user_id = %s', (user_id,))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'All resume feedback deleted successfully.'}), 200
+    except Exception as e:
+        print(f"Error deleting feedback: {e}")
+        return jsonify({'error': 'Failed to delete feedback.'}), 500
+    
 @app.route('/jobs')
 def jobs():
     if not session.get('logged_in'):

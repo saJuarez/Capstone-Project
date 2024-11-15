@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
     <!-- Side Menu -->
     <div id="sidebar-icon" class="icon">
@@ -20,14 +22,15 @@
                     <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
                     Jobs
                 </a>
-            </li>                       
+            </li>
+
             <li>
                 <a href="/feedback-history" id="feedback-history-link">
                     <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
                     Feedback History
                 </a>
             </li>
-            
+
             <li>
                 <a href="#" id="settings-link">
                     <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
@@ -35,11 +38,15 @@
                 </a>
             </li>
         </ul>
-        <a href="/logout" id="logout-button">
+        <a href="#" id="sign-in-button" style="display: none;">
+            <img src="../static/images/icons/sign-in-icon.svg" alt="Sign In icon" width="20" height="20">
+            Sign In
+        </a>
+        <a href="/logout" id="logout-button" style="display: none;">
             <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
             Logout
         </a>
-    </nav>    
+    </nav>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
@@ -58,26 +65,34 @@
                         <!-- Change password -->
                         <div id="change-password-section" class="mb-20">
                             <label for="password">Password:</label>
-                            <button type="button" id="change-password-button" class="button tertiary-bg small">Change
-                                Password</button>
+                            <button type="button" id="change-password-button" class="button tertiary-bg small">
+                                Change Password
+                            </button>
 
-                                <div id="password-fields" style="display: none; margin-top: 20px;">
-                                    <form id="change-password-form">
-                                        <input type="hidden" id="user_id" name="user_id" value="{{ session['user_id'] }}">
-                                                                                
-                                        <label for="old-password">Old Password:</label>
-                                        <input type="password" id="old-password" name="old-password" required>
-                                        
-                                        <label for="new-password">New Password:</label>
-                                        <input type="password" id="new-password" name="new-password" required>
-                                        
-                                        <label for="confirm-password">Confirm New Password:</label>
-                                        <input type="password" id="confirm-password" name="confirm-password" required>
-                                        
-                                        <button type="submit" class="button primary-bg small">Save New Password</button>
-                                    </form>
-                                </div>
-                                
+                            <div id="password-fields" style="display: none; margin-top: 20px;">
+                                <form id="change-password-form">
+                                    <input type="hidden" id="user_id" name="user_id" value="{{ session['user_id'] }}">
+
+                                    <label for="old-password">Old Password:</label>
+                                    <input type="password" id="old-password" name="old-password" required>
+
+                                    <label for="new-password">New Password:</label>
+                                    <input type="password" id="new-password" name="new-password" required>
+
+                                    <label for="confirm-password">Confirm New Password:</label>
+                                    <input type="password" id="confirm-password" name="confirm-password" required>
+
+                                    <button type="submit" class="button primary-bg small">Save New Password</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Delete All Resume Feedback -->
+                        <div id="delete-feedback-section" class="mb-20">
+                            <label for="delete-feedback">Resume Feedback:</label>
+                            <button type="button" id="delete-feedback-button" class="button danger-bg small">
+                                Delete All Resume Feedback
+                            </button>
                         </div>
                     </div>
 
@@ -89,8 +104,16 @@
         </div>
     </div>
 
-     <!-- Login Modal -->
-     <div id="login-modal" class="modal">
+    <div id="general" class="tab-content">
+        <h3>General Settings</h3>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
         <div class="modal-content">
             <button class="close-modal">&times;</button>
             <h2>Log In</h2>
@@ -159,4 +182,5 @@
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

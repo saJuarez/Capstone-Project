@@ -2,6 +2,12 @@
 
 ## Changelog
 
+### [11.15.03 Library Poster]
+- Added a "Delete feedback history" feature to the settings tab on the index page.
+- Added dynamic "login/sign-up" icon logic to change this icon in thye side menu depending on a 
+  login status.(Ongoing)
+- Worked on side menu logic across all pages on the application.(Ongoing)
+
 ### [11.15.02 Library Poster]
 - Fully implemented password changing logic.
 - Fixed event handling logic for various modals found on index page.

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Match Results | AI Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='jobs.css') }}"> 
+    <link rel="stylesheet" href="{{ url_for('static', filename='jobs.css') }}">
 </head>
 <body>
     <header>
@@ -26,14 +26,14 @@
                     Home
                 </a>
             </li>
-            
+
             <li>
-                <a href="#">
-                    <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
-                    Jobs
+                <a href="/feedback-history" id="feedback-history-link">
+                    <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
+                    Feedback History
                 </a>
             </li>
-
+            
             <li>
                 <a href="#" id="settings-link">
                     <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
@@ -41,6 +41,7 @@
                 </a>
             </li>
         </ul>
+
         <a href="#" id="logout-button">
             <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
             Logout
@@ -125,10 +126,10 @@
 
     <main>
         <div id="job-results-container">
-            <!-- Job results will be populated here -->
+            <!-- Job results populated here -->
         </div>
     </main>
 
-    <script src="{{ url_for('static', filename='jobs.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='jobs.js') }}"></script>
 </body>
 </html>
