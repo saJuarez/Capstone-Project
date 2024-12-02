@@ -1,38 +1,44 @@
-# Capstone-Project
+# AI Resume Analyzer
 
-## Changelog
+An application that allows users to upload their resumes, grades and provides them based on specific criteria, and provides job recommendations based on their resume content.
 
-### [11.15.03 Library Poster]
-- Added a "Delete feedback history" feature to the settings tab on the index page.
-- Added dynamic "login/sign-up" icon logic to change this icon in thye side menu depending on a 
-  login status.(Ongoing)
-- Worked on side menu logic across all pages on the application.(Ongoing)
+---
 
-### [11.15.02 Library Poster]
-- Fully implemented password changing logic.
-- Fixed event handling logic for various modals found on index page.
-- Stylized jobs page; added loading animation while user waits for jobs to be pulled
-  (animation also on index page when a user is waiting for feedback).
+## Prerequisites
 
-### [11.15.01 Library Poster]
-- Fixed issue where settings modal wouldn't open.
+Be sure to have the following installed to run the app:
 
-### [10.27.01 Propress Report]
-- Fixed session issues. Users can now sign up new accounts and log in, allowing access to
-  feedback page and settings menu.
-- Started integrating the jobs matching API and web page. Currently still in development;
-  still need to finish proper routing.
-- Confirmed saving user's resume to database (see the sample database of users and resumes).
-- Developed feedback page UI. Users can now view previous feedback on resumes and download
-  them in the form of a pdf (styling bugs to be fixed later).
+1. **Python 3.10** 
+   - Add to system PATH during installation.
+2. **PostgreSQL**
+3. **pip** and **virtualenv**
+---
 
-### [9.30.02 Propress Report]
-- Updated stylesheet to make it DRY-er as it is getting long.
-- Restyled index site buttons.
-- Added Sign Up Button.
+## Installation
 
-### [9.30.01 Propress Report]
-- Added login window.
-- Added Sidebar and associated javascript for user navigation.
-- Fixed glitchy display.
-- Added SVG icons
+### Step 1: Clone the Repository
+
+Clone the repository
+```bash 
+git clone https://github.com/saJuarez/Capstone-Project.git
+```
+Navigate to the project directory:
+```bash
+cd Capstone-project
+```
+
+### Step 2: Install Dependencies
+Install the required Python dependencies from the requirements.txt file:
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Configure Enviornment Variables
+Configure the .env file to your actual credentials.
+
+### Step 4: Run the Application
+Start the Flask development server:
+```bash
+flask run
+```
+Navigate to http://127.0.0.1:5000 in your browser and test it out!
