@@ -1,0 +1,109 @@
+/* Job Page-Specific Styles */
+body {
+    display: block;
+    justify-content: normal;
+    align-items: normal;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    background-color: transparent;
+    color: white;
+    padding: 20px;
+    width: 100%;
+    text-align: center;
+    box-shadow: none;
+    z-index: 1000;
+}
+
+header h1 {
+    font-size: 2rem;
+    margin: 0;
+}
+
+/* Centered Main Content */
+main {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+/* Job Results Container */
+#job-results-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    width: 100%;
+}
+
+/* Job Entry Styling */
+.job-entry {
+    background-color: var(--light-gray);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.job-entry p {
+    margin: 10px 0;
+}
+
+.job-entry strong {
+    color: var(--primary-color);
+}
+
+.job-entry a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+.job-entry a:hover {
+    text-decoration: underline;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    main {
+        padding: 10px;
+    }
+}
+
+#side-menu {
+    display: none; /* Initially hidden */
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+#side-menu.open {
+    display: block; /* or flex depending on your layout */
+    transform: translateX(0);
+    opacity: 1;
+}
+
+#sidebar-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001; /* Ensure it’s above other elements */
+}

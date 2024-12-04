@@ -1,33 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Analyzer & Chat</title>
+    <title>AI Resume Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
-    <div class="container">
-        <h1>AI Resume Analyzer</h1>
-        <p>Upload your resume as PDF or DOC, and let our AI analyze it!</p>
+    <!-- Side Menu -->
+    <div id="sidebar-icon" class="icon">
+        <img src="../static/images/icons/sidebar-icon.svg" alt="Menu icon" width="40" height="40">
+    </div>
+
+    <nav id="side-menu">
+        <button id="close-menu" aria-label="Close side menu">&times;</button>
+        <ul>
+            <li>
+                <a href="/jobs" id="jobs-link">
+                    <img src="../static/images/icons/suitcase-icon.svg" alt="Jobs icon" width="24" height="24">
+                    Jobs
+                </a>
+            </li>
+
+            <li>
+                <a href="/feedback-history" id="feedback-history-link">
+                    <img src="../static/images/icons/history-icon.svg" alt="Rating history icon" width="24" height="24">
+                    Feedback History
+                </a>
+            </li>
+
+            <li>
+                <a href="#" id="settings-link">
+                    <img src="../static/images/icons/settings-icon.svg" alt="Settings icon" width="24" height="24">
+                    Settings
+                </a>
+            </li>
+        </ul>
+        <a href="#" id="sign-in-button" style="display: none;">
+            <img src="../static/images/icons/sign-in-icon.svg" alt="Sign In icon" width="20" height="20">
+            Sign In
+        </a>
+        <a href="/logout" id="logout-button" style="display: none;">
+            <img src="../static/images/icons/logout-icon.svg" alt="Logout icon" width="20" height="20">
+            Logout
+        </a>
+    </nav>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Settings</h2>
+            <div id="settings-container">
+                <div id="tabs">
+                    <button class="tab-link active" data-tab="account">Account</button>
+                    <button class="tab-link" data-tab="general">General</button>
+                </div>
+
+                <div id="tab-contents">
+                    <!-- Account settings-->
+                    <div id="account" class="tab-content active">
+                        <!-- Change password -->
+                        <div id="change-password-section" class="mb-20">
+                            <label for="password">Password:</label>
+                            <button type="button" id="change-password-button" class="button tertiary-bg small">
+                                Change Password
+                            </button>
+
+                            <div id="password-fields" style="display: none; margin-top: 20px;">
+                                <form id="change-password-form">
+                                    <input type="hidden" id="user_id" name="user_id" value="{{ session['user_id'] }}">
+
+                                    <label for="old-password">Old Password:</label>
+                                    <input type="password" id="old-password" name="old-password" required>
+
+                                    <label for="new-password">New Password:</label>
+                                    <input type="password" id="new-password" name="new-password" required>
+
+                                    <label for="confirm-password">Confirm New Password:</label>
+                                    <input type="password" id="confirm-password" name="confirm-password" required>
+
+                                    <button type="submit" class="button primary-bg small">Save New Password</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Delete All Resume Feedback -->
+                        <div id="delete-feedback-section" class="mb-20">
+                            <label for="delete-feedback">Resume Feedback:</label>
+                            <button type="button" id="delete-feedback-button" class="button danger-bg small">
+                                Delete All Resume Feedback
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="general" class="tab-content">
+                        <h3>General Settings</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="general" class="tab-content">
+        <h3>General Settings</h3>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Log In</h2>
+            <form id="login-form" class="modal-form" action="/login" method="POST">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+                <button type="submit" id="login-button" class="button tertiary-bg">Log In</button>
+                <button type="button" id="sign-up-button" class="button primary-bg">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Error</h2>
+            <p id="error-message">You must be logged in first!</p>
+        </div>
+    </div>
+
+    <!-- Sign-Up Modal -->
+    <div id="sign-up-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Sign Up</h2>
+            <form id="sign-up-form" class="modal-form" action="/signup" method="POST">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <label for="email">Email:</label>
+                <input type="email" id="sign-up-email" name="email" required>
+                <label for="password">Password:</label>
+                <input type="password" id="sign-up-password" name="password" required>
+                <button type="submit" class="button primary-bg">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-container">
+        <h1 class="mb-20">AI Resume Analyzer</h1>
+        <p class="mb-30">Upload your resume as a PDF or DOCX file and let our AI analyze it!</p>
 
         <form id="resume-form" action="/upload" method="POST" enctype="multipart/form-data">
             <label for="resume-upload" class="upload-label">Choose PDF or DOC File</label>
             <input type="file" id="resume-upload" name="resume" accept=".pdf, .doc, .docx" required>
-            <button type="submit">Upload Resume</button>
+            <button type="submit" id="upload-resume-button" class="button tertiary-bg">Upload Resume</button>
         </form>
 
-        <div id="analysis-result"></div>
+        <div id="analysis-result" class="mb-20"></div>
 
-        <!-- AI Chat Box -->
-        <div class="chat-box">
-            <h2>AI Chat Box</h2>
-            <div id="chat-log"></div>
-            <textarea id="chat-input" placeholder="Type your message here..."></textarea>
-            <button id="send-chat">Send</button>
+        <!-- Modal Structure -->
+        <div id="grade-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <button class="close-modal">&times;</button>
+                <h2>Grade Result</h2>
+                <p id="grade-result"></p>
+                <ul id="feedback-list"></ul>
+                <button id="download-feedback" class="button primary-bg">Download Feedback</button>
+            </div>
         </div>
-    </div>
+
+    </main>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
